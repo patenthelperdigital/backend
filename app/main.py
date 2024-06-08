@@ -1,8 +1,13 @@
 from fastapi import FastAPI
+import os
+import sys
 
-app = FastAPI()
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
 
 
-@app.get('/health')
-async def get_health():
-    return {"status": "OK"}
+from app.core.config import settings
+from app.api.routers import main_router
+
+app = FastAPI(title=settings.app_title)
+app.include_router(main_router)
