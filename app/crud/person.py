@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Any
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ class CRUDPerson(CRUDBase):
     def __init__(self):
         super().__init__(Person)
 
-    async def get_persons_list(self, session: AsyncSession, page: int) -> Sequence[Person]:
+    async def get_persons_list(self, session: AsyncSession, page: int, pagesize: int) -> list[dict[str, list | int | Any]]:
         """
         Получает список персон, упорядоченных по убыванию количества принадлежащих им патентов.
 
@@ -24,19 +24,29 @@ class CRUDPerson(CRUDBase):
         Returns:
             List[Person]: Список персон.
         """
-        limit: int = 100
-        skip = (page - 1) * limit
+        skip = (page - 1) * pagesize
 
         stmt = (select(Person)
+                .options(selectinload(Person.ownerships))
                 .join(Ownership, Ownership.person_id == Person.id)
                 .group_by(Person.id)
                 .order_by(func.count(Ownership.patent_id).desc())
                 .offset(skip)
-                .limit(limit))
+                .limit(pagesize))
 
         result = await session.execute(stmt)
         persons = result.scalars().all()
-        return persons
+        persons_list = []
+        for person in persons:
+            patent_ids = [ownership.patent_id for ownership in person.ownerships]
+            persons_list.append({
+                **person.__dict__,
+                "category": person.category,
+                "patent_ids": patent_ids,
+                "patent_count": len(patent_ids)
+            })
+
+        return persons_list
 
     async def get_person(self, session: AsyncSession, id: int) -> dict:
         """
@@ -66,6 +76,7 @@ class CRUDPerson(CRUDBase):
 
         return {
             **person.__dict__,
+            "category": person.category,
             "patent_ids": patent_ids,
             "patent_count": patent_count,
         }

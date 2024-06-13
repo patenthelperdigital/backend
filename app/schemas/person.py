@@ -38,6 +38,7 @@ class PersonUpdate(PersonBase):
 
 class PersonAdditionalFields(PersonBase):
     id: int
+    category: str
     patent_ids: list[int] = []
     patent_count: int = 0
 

@@ -17,6 +17,12 @@ class KindEnum(Enum):
     INDUSTRIAL_DESIGN = 3
 
 
+class PatentHolder(BaseModel):
+    id: int
+    full_name: str
+    tax_number: str
+
+
 class PatentBase(BaseModel):
     reg_number: int
     reg_date: Optional[date]
@@ -26,9 +32,14 @@ class PatentBase(BaseModel):
     address: Optional[str]
     name: str
     actual: bool
-    class_: Optional[int]
-    subclass: Optional[int]
+    category: Optional[str]
+    subcategory: Optional[str]
     kind: int
+    patent_holders: list[PatentHolder]
+    author_count: int
+    region: Optional[str]
+    city: Optional[str]
+    id: int
 
 
 class PatentCreate(PatentBase):
@@ -41,8 +52,6 @@ class PatentUpdate(PatentBase):
 
 class PatentAdditionalFields(PatentBase):
     id: int
-    person_ids: list[int] = []
-    person_count: int = 0
     author_count: int = 0
 
     class Config:
@@ -50,7 +59,6 @@ class PatentAdditionalFields(PatentBase):
 
 
 class PatentDB(PatentBase):
-    id: int
 
     class Config:
         orm_mode = True

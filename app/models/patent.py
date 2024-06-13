@@ -5,17 +5,18 @@ from app.core.db import Base
 
 
 class Patent(Base):
-    reg_number = Column(Integer, nullable=False, unique=True, index=True)
+    reg_number = Column(Integer, nullable=False, index=True)
     reg_date = Column(Date)
     appl_date = Column(Date)
-    author_raw = Column(String(length=150))
-    owner_raw = Column(String(length=150))
+    author_raw = Column(String)
+    owner_raw = Column(String)
     address = Column(String)
-    name = Column(String, unique=True)
-    actual = Column(Boolean, default=False)
-    class_ = Column('class', Integer)
-    #class_codification = Column(Integer)
-    subclass = Column(Integer)
+    name = Column(String)
+    actual = Column(Boolean, default=True)
+    category = Column(String)
+    subcategory = Column(String)
     kind = Column(Integer, nullable=False)
-
+    region = Column(String)
+    city = Column(String)
+    author_count = Column(Integer)
     ownerships = relationship('Ownership', back_populates='patent', cascade="all, delete-orphan")

@@ -12,8 +12,8 @@ from app.schemas.person import PersonDB, PersonCreate, PersonAdditionalFields, P
 router = APIRouter()
 
 
-@router.get("/persons", response_model=list[PersonDB], status_code=HTTPStatus.OK)
-async def get_persons(page: int = 1, session: AsyncSession = Depends(get_async_session)) -> list[PersonDB]:
+@router.get("/persons", response_model=list[PersonAdditionalFields], status_code=HTTPStatus.OK)
+async def get_persons(session: AsyncSession = Depends(get_async_session), page: int = 1, pagesize: int = 10) -> list[PersonAdditionalFields]:
     """
     Получить список персон.
 
@@ -24,7 +24,7 @@ async def get_persons(page: int = 1, session: AsyncSession = Depends(get_async_s
     Returns:
         List[PersonDB]: список персон.
     """
-    persons = await person_crud.get_persons_list(session, page)
+    persons = await person_crud.get_persons_list(session, page, pagesize)
     return persons
 
 

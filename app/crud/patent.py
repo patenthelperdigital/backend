@@ -1,11 +1,11 @@
-from typing import Sequence
+from typing import Sequence, Any
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.crud.crud_base import CRUDBase
-from app.models import Ownership
+from app.models import Ownership, Person
 from app.models.patent import Patent
 
 
@@ -13,7 +13,7 @@ class CRUDPatent(CRUDBase):
     def __init__(self):
         super().__init__(Patent)
 
-    async def get_patents_list(self, session: AsyncSession, page: int) -> Sequence[Patent]:
+    async def get_patents_list(self, session: AsyncSession, page: int, pagesize: int) -> list[dict[str, int | list[dict[str, Any]] | Any]]:
         """
         Получает список патентов, упорядоченных по названию.
 
@@ -24,12 +24,42 @@ class CRUDPatent(CRUDBase):
         Returns:
             List[Patent]: Список патентов.
         """
-        limit: int = 100
-        skip = (page - 1) * limit
-        stmt = select(Patent).order_by(Patent.name).offset(skip).limit(limit)
+        skip = (page - 1) * pagesize
+        stmt = (
+            select(
+                Patent,
+                func.string_agg(Person.short_name, ', ').label("owner_raw"),
+                func.count(Patent.author_raw.distinct()).label('author_count')
+            )
+            .join(Ownership, Ownership.patent_id == Patent.id)
+            .join(Person, Person.id == Ownership.person_id)
+            .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
+            .group_by(Patent.id, Ownership.patent_id)
+            .offset(skip)
+            .limit(pagesize)
+        )
         result = await session.execute(stmt)
-        patents = result.scalars().all()
-        return patents
+        patents = result.all()
+
+        patents_list = []
+        for patent, owner_raw, author_count in patents:
+            patent_holders = [
+                {
+                    "id": ownership.person.id,
+                    "full_name": ownership.person.full_name,
+                    "tax_number": ownership.person.tax_number
+                }
+                for ownership in patent.ownerships
+            ]
+
+            patents_list.append({
+                **patent.__dict__,
+                "owner_raw": owner_raw,
+                "patent_holders": patent_holders,
+                "author_count": len(patent.author_raw.split(','))
+            })
+
+        return patents_list
 
     async def get_patent(self, session: AsyncSession, id: int) -> dict:
         """
@@ -46,24 +76,32 @@ class CRUDPatent(CRUDBase):
         stmt = (
             select(
                 Patent,
-                func.count(Patent.owner_raw.distinct()).label("person_count"),
+                func.string_agg(Person.short_name, ', ').label("owner_raw"),
                 func.count(Patent.author_raw.distinct()).label('author_count')
             )
             .join(Ownership, Ownership.patent_id == Patent.id)
+            .join(Person, Person.id == Ownership.person_id)
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
-            .group_by(Patent.id)
+            .group_by(Patent.id, Ownership.patent_id)
             .where(Patent.id == id)
+
         )
         result = await session.execute(stmt)
-        patent, person_count, author_count = result.one()
+        patent, owner_raw, author_count = result.one()
 
-        person_ids = [ownership.person_id for ownership in patent.ownerships if
-                      ownership.person.full_name == patent.owner_raw]
+        patent_holders = [
+            {
+                "id": ownership.person.id,
+                "full_name": ownership.person.full_name,
+                "tax_number": ownership.person.tax_number
+            }
+            for ownership in patent.ownerships
+        ]
 
         return {
             **patent.__dict__,
-            "person_ids": person_ids,
-            "person_count": person_count,
+            "owner_raw": owner_raw,
+            "patent_holders": patent_holders,
             "author_count": len(patent.author_raw.split(','))
         }
 
