@@ -5,7 +5,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker, declared_attr
 from app.core.config import settings
 
 
-
 class PreBase:
     """
     Базовый класс для определения таблиц в базе данных с использованием SQLAlchemy.
@@ -15,8 +14,6 @@ class PreBase:
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
-
-    id = Column(Integer, primary_key=True)
 
 
 Base = declarative_base(cls=PreBase)
@@ -33,4 +30,3 @@ async def get_async_session():
     """
     async with AsyncSessionLocal() as async_session:
         yield async_session
-

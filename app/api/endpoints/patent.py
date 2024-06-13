@@ -1,31 +1,39 @@
+
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+
 
 from app.api.validators import check_object_exists
 from app.core.db import get_async_session
 from app.crud.patent import patent_crud
 from app.models import Patent
+from app.patent_parser.parser import create_upload_file
 
 from app.schemas.patent import PatentAdditionalFields, PatentUpdate, PatentDB, PatentCreate
 
 router = APIRouter()
 
 
-@router.get('/patents', response_model=list[PatentDB], status_code=HTTPStatus.OK)
-async def list_patents(session: AsyncSession = Depends(get_async_session), page: int = 1) -> list[PatentDB]:
+@router.get('/patents', response_model=list[PatentAdditionalFields], status_code=HTTPStatus.OK)
+async def list_patents(
+    session: AsyncSession = Depends(get_async_session),
+    page: int = 1,
+    pagesize: int = 10
+) -> list[PatentAdditionalFields]:
     """
     Получить список патентов.
 
     Args:
         session (AsyncSession): асинхронная сессия базы данных.
         page (int): номер страницы для пагинации.
+        pagesize (int): количество элементов на странице.
 
     Returns:
-        List[PatentDB]: список патентов.
+        List[PatentAdditionalFields]: список патентов с дополнительными полями.
     """
-    patents = await patent_crud.get_patents_list(session, page=page)
+    patents = await patent_crud.get_patents_list(session, page, pagesize)
     return patents
 
 
@@ -45,27 +53,32 @@ async def create_patent(patent: PatentCreate, session: AsyncSession = Depends(ge
     return new_patent
 
 
-@router.get('/patent/{patent_id}', response_model=PatentAdditionalFields, status_code=HTTPStatus.OK)
-async def get_patent(patent_id: int, session: AsyncSession = Depends(get_async_session)) -> PatentAdditionalFields:
+@router.get('/patent/{patent_kind}/{patent_reg_number}', response_model=PatentAdditionalFields, status_code=HTTPStatus.OK)
+async def get_patent(
+    patent_kind: int,
+    patent_reg_number: int,
+    session: AsyncSession = Depends(get_async_session)
+) -> PatentAdditionalFields:
     """
     Получить патент по идентификатору.
 
     Args:
-        patent_id (int): идентификатор патента.
+        patent_kind (int): тип патента.
+        patent_reg_number (int): регистрационный номер патента.
         session (AsyncSession): асинхронная сессия базы данных.
 
     Returns:
         PatentAdditionalFields: патент с дополнительными полями.
     """
-    patent = await patent_crud.get_patent(session, patent_id)
+    patent = await patent_crud.get_patent(session, patent_kind, patent_reg_number)
     return patent
 
 
 @router.patch('/patent/{patent_id}', response_model=PatentDB, status_code=HTTPStatus.OK)
 async def update_patent(
-    patent_id: int,
-    obj_in: PatentUpdate,
-    session: AsyncSession = Depends(get_async_session)
+        patent_id: int,
+        obj_in: PatentUpdate,
+        session: AsyncSession = Depends(get_async_session)
 ) -> PatentDB:
     """
     Обновить существующий патент.
@@ -94,3 +107,19 @@ async def delete_patent(patent_id: int, session: AsyncSession = Depends(get_asyn
     """
     patent = await check_object_exists(Patent, patent_id, session)
     await patent_crud.delete_object(patent, session)
+
+
+@router.post("/uploadfile/", status_code=HTTPStatus.OK)
+async def send_patent_file(file: UploadFile):
+    """
+       Асинхронный путь для загрузки файла Excel с данными о патентах.
+
+       Args:
+           file (UploadFile): Загруженный файл Excel.
+
+       Returns:
+           Response: Ответ сервера с созданным файлом Excel или сообщением об ошибке.
+
+    """
+    await create_upload_file(file)
+

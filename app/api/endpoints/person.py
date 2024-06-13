@@ -12,19 +12,24 @@ from app.schemas.person import PersonDB, PersonCreate, PersonAdditionalFields, P
 router = APIRouter()
 
 
-@router.get("/persons", response_model=list[PersonDB], status_code=HTTPStatus.OK)
-async def get_persons(page: int = 1, session: AsyncSession = Depends(get_async_session)) -> list[PersonDB]:
+@router.get("/persons", response_model=list[PersonAdditionalFields], status_code=HTTPStatus.OK)
+async def list_persons(
+        session: AsyncSession = Depends(get_async_session),
+        page: int = 1,
+        pagesize: int = 10
+) -> list[PersonAdditionalFields]:
     """
     Получить список персон.
 
     Args:
-        page (int): номер страницы для пагинации. По умолчанию 1.
         session (AsyncSession): асинхронная сессия базы данных.
+        page (int): номер страницы для пагинации. По умолчанию 1.
+        pagesize (int): количество элементов на странице. По умолчанию 10.
 
     Returns:
-        List[PersonDB]: список персон.
+        List[PersonAdditionalFields]: список персон с дополнительными полями.
     """
-    persons = await person_crud.get_persons_list(session, page)
+    persons = await person_crud.get_persons_list(session, page, pagesize)
     return persons
 
 
@@ -44,19 +49,22 @@ async def create_person(person: PersonCreate, session: AsyncSession = Depends(ge
     return new_person
 
 
-@router.get("/person/{person_id}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
-async def get_person(person_id: int, session: AsyncSession = Depends(get_async_session)) -> PersonAdditionalFields:
+@router.get("/person/{person_tax_number}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
+async def get_person(
+        person_tax_number: str,
+        session: AsyncSession = Depends(get_async_session)
+) -> PersonAdditionalFields:
     """
     Получить персону по идентификатору.
 
     Args:
-        person_id (int): идентификатор персоны.
+        person_tax_number (str): идентификационный номер персоны.
         session (AsyncSession): асинхронная сессия базы данных.
 
     Returns:
         PersonAdditionalFields: персона с дополнительными полями.
     """
-    person = await person_crud.get_person(session, person_id)
+    person = await person_crud.get_person(session, person_tax_number)
     return person
 
 
