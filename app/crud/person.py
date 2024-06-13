@@ -13,12 +13,7 @@ class CRUDPerson(CRUDBase):
     def __init__(self):
         super().__init__(Person)
 
-    async def get_persons_list(
-            self,
-            session: AsyncSession,
-            page: int,
-            pagesize: int
-    ) -> list[dict[str, list | int | Any]]:
+    async def get_persons_list(self, session: AsyncSession, page: int, pagesize: int) -> list[dict[str, list | int | Any]]:
         """
         Получает список персон, упорядоченных по убыванию количества принадлежащих им патентов.
 
@@ -57,10 +52,7 @@ class CRUDPerson(CRUDBase):
 
         return persons_list
 
-    async def get_person(
-            self, session: AsyncSession,
-            person_tax_number: str
-    ) -> dict[str, Any]:
+    async def get_person(self, session: AsyncSession, person_tax_number: str) -> dict[str, Any]:
         """
         Получает персону по идентификатору с дополнительной информацией.
 

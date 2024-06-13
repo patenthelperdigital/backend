@@ -19,9 +19,11 @@ class Patent(Base):
     region = Column(String)
     city = Column(String)
     author_count = Column(Integer)
+
     ownerships = relationship('Ownership', back_populates='patent', cascade="all, delete-orphan")
 
     __table_args__ = (
         PrimaryKeyConstraint('kind', 'reg_number'),
         {},
     )
+

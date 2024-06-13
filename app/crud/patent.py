@@ -13,11 +13,7 @@ class CRUDPatent(CRUDBase):
     def __init__(self):
         super().__init__(Patent)
 
-    async def get_patents_list(
-            self, session: AsyncSession,
-            page: int,
-            pagesize: int
-    ) -> list[dict[str, int | list[dict[str, Any]] | Any]]:
+    async def get_patents_list(self, session: AsyncSession, page: int, pagesize: int) -> list[dict[str, int | list[dict[str, Any]] | Any]]:
         """
         Получает список патентов, упорядоченных по названию.
 
@@ -65,11 +61,7 @@ class CRUDPatent(CRUDBase):
 
         return patents_list
 
-    async def get_patent(
-            self, session: AsyncSession,
-            patent_kind: int,
-            patent_reg_number: int
-    ) -> dict[str, Any]:
+    async def get_patent(self, session: AsyncSession, patent_kind: int, patent_reg_number: int) -> dict[str, Any]:
         """
         Получает патент по идентификатору с дополнительной информацией.
 

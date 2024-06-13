@@ -22,6 +22,7 @@ async def list_patents(
     page: int = 1,
     pagesize: int = 10
 ) -> list[PatentAdditionalFields]:
+
     """
     Получить список патентов.
 
