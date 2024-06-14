@@ -1,11 +1,11 @@
 from datetime import date
-from enum import Enum
+from enum import IntEnum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
-class KindEnum(Enum):
+class KindEnum(IntEnum):
     """
     Перечисление видов патентов:
     1 - изобретение,
@@ -34,11 +34,16 @@ class PatentBase(BaseModel):
     category: Optional[str]
     subcategory: Optional[str]
     kind: int
-    patent_holders: list[PatentHolder]
     author_count: int
     region: Optional[str]
     city: Optional[str]
 
+    @field_validator('kind')
+    @classmethod
+    def check_kind_value(cls, value: int):
+        if value not in KindEnum.__members__.values():
+            raise ValueError('Можно использовать только цифры от 1 до 3')
+        return value
 
 
 class PatentCreate(PatentBase):
@@ -50,6 +55,7 @@ class PatentUpdate(PatentBase):
 
 
 class PatentAdditionalFields(PatentBase):
+    patent_holders: list[PatentHolder]
     author_count: int = 0
 
     class Config:
@@ -57,6 +63,5 @@ class PatentAdditionalFields(PatentBase):
 
 
 class PatentDB(PatentBase):
-
     class Config:
         orm_mode = True

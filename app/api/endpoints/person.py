@@ -3,7 +3,7 @@ from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.validators import check_object_exists
+from app.api.validators import check_person_exists
 from app.core.db import get_async_session
 from app.crud.person import person_crud
 from app.models import Person
@@ -34,7 +34,10 @@ async def list_persons(
 
 
 @router.post("/person", response_model=PersonDB, status_code=HTTPStatus.CREATED)
-async def create_person(person: PersonCreate, session: AsyncSession = Depends(get_async_session)) -> PersonDB:
+async def create_person(
+        person: PersonCreate,
+        session: AsyncSession = Depends(get_async_session)
+) -> PersonDB:
     """
     Создать новую персону.
 
@@ -68,9 +71,9 @@ async def get_person(
     return person
 
 
-@router.patch('/person/{person_id}', response_model=PersonDB, status_code=HTTPStatus.OK)
+@router.patch('/person/{person_tax_number}', response_model=PersonDB, status_code=HTTPStatus.OK)
 async def update_person(
-        person_id: int,
+        person_tax_number: str,
         obj_in: PersonUpdate,
         session: AsyncSession = Depends(get_async_session)
 ) -> PersonDB:
@@ -78,26 +81,29 @@ async def update_person(
     Обновить существующую персону.
 
     Args:
-        person_id (int): идентификатор персоны.
+        person_tax_number (str): идентификационный номер персоны.
         obj_in (PersonUpdate): данные для обновления персоны.
         session (AsyncSession): асинхронная сессия базы данных.
 
     Returns:
         PersonDB: обновленная персона.
     """
-    person = await check_object_exists(Person, person_id, session)
+    person = await check_person_exists(Person, person_tax_number, session)
     updated_person = await person_crud.update_object(person, obj_in, session)
     return updated_person
 
 
-@router.delete('/person/{person_id}', status_code=HTTPStatus.NO_CONTENT)
-async def delete_person(person_id: int, session: AsyncSession = Depends(get_async_session)) -> None:
+@router.delete('/person/{person_tax_number}', status_code=HTTPStatus.NO_CONTENT)
+async def delete_person(
+        person_tax_number: str,
+        session: AsyncSession = Depends(get_async_session)
+) -> None:
     """
     Удалить персону по идентификатору.
 
     Args:
-        person_id (int): идентификатор персоны.
+        person_tax_number(int): идентификационный номер персоны.
         session (AsyncSession): асинхронная сессия базы данных.
     """
-    person = await check_object_exists(Person, person_id, session)
+    person = await check_person_exists(Person, person_tax_number, session)
     await person_crud.delete_object(person, session)

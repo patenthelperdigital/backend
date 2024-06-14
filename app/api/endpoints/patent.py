@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from app.api.validators import check_object_exists
+from app.api.validators import check_patent_exists
 from app.core.db import get_async_session
 from app.crud.patent import patent_crud
 from app.models import Patent
@@ -39,7 +39,10 @@ async def list_patents(
 
 
 @router.post('/patent', response_model=PatentDB, status_code=HTTPStatus.CREATED)
-async def create_patent(patent: PatentCreate, session: AsyncSession = Depends(get_async_session)) -> PatentDB:
+async def create_patent(
+        patent: PatentCreate,
+        session: AsyncSession = Depends(get_async_session)
+) -> PatentDB:
     """
     Создать новый патент.
 
@@ -75,9 +78,10 @@ async def get_patent(
     return patent
 
 
-@router.patch('/patent/{patent_id}', response_model=PatentDB, status_code=HTTPStatus.OK)
+@router.patch('/patent/{patent_kind}/{patent_reg_number}', response_model=PatentDB, status_code=HTTPStatus.OK)
 async def update_patent(
-        patent_id: int,
+        patent_kind: int,
+        patent_reg_number: int,
         obj_in: PatentUpdate,
         session: AsyncSession = Depends(get_async_session)
 ) -> PatentDB:
@@ -85,28 +89,34 @@ async def update_patent(
     Обновить существующий патент.
 
     Args:
-        patent_id (int): идентификатор патента.
-        obj_in (PatentUpdate): данные для обновления патента.
-        session (AsyncSession): асинхронная сессия базы данных.
+       patent_kind (int): вид патента.
+       patent_reg_number (int): регистрационный номер патента.
+       obj_in (PatentUpdate): данные для обновления патента.
+       session (AsyncSession): асинхронная сессия базы данных.
 
     Returns:
-        PatentDB: обновленный патент.
+       PatentDB: обновленный патент.
     """
-    patent = await check_object_exists(Patent, patent_id, session)
+    patent = await check_patent_exists(Patent, patent_kind, patent_reg_number, session)
     updated_patent = await patent_crud.update_object(patent, obj_in, session)
     return updated_patent
 
 
-@router.delete('/patent/{patent_id}', status_code=HTTPStatus.NO_CONTENT)
-async def delete_patent(patent_id: int, session: AsyncSession = Depends(get_async_session)) -> None:
+@router.delete('/patent/{patent_kind}/{patent_reg_number}', status_code=HTTPStatus.NO_CONTENT)
+async def delete_patent(
+        patent_kind: int,
+        patent_reg_number: int,
+        session: AsyncSession = Depends(get_async_session)
+) -> None:
     """
-    Удалить патент по идентификатору.
+    Удалить патент по виду и регистрационному номеру.
 
     Args:
-        patent_id (int): идентификатор патента.
+        patent_kind (int): вид патента.
+        patent_reg_number (int): регистрационный номер патента.
         session (AsyncSession): асинхронная сессия базы данных.
     """
-    patent = await check_object_exists(Patent, patent_id, session)
+    patent = await check_patent_exists(Patent, patent_kind, patent_reg_number, session)
     await patent_crud.delete_object(patent, session)
 
 

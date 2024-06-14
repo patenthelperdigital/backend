@@ -1,11 +1,11 @@
-from enum import Enum
+from enum import IntEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date
 
 
-class PersonKindEnum(Enum):
+class PersonKindEnum(IntEnum):
     """
     Перечисление видов лиц:
     1 - юрлицо,
@@ -26,6 +26,13 @@ class PersonBase(BaseModel):
     fact_address: Optional[str]
     reg_date: Optional[date]
     active: bool
+
+    @field_validator('kind')
+    @classmethod
+    def check_kind_value(cls, value: int):
+        if value not in PersonKindEnum.__members__.values():
+            raise ValueError('Можно использовать только цифры от 1 до 3')
+        return value
 
 
 class PersonCreate(PersonBase):
