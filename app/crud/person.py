@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ class CRUDPerson(CRUDBase):
     def __init__(self):
         super().__init__(Person)
 
-    async def get_persons_list(self, session: AsyncSession, page: int, pagesize: int) -> list[dict[str, list | int | Any]]:
+    async def get_persons_list(self, session: AsyncSession, page: int, pagesize: int) -> Dict[str, int | list[dict[str, list | int | Any]]]:
         """
         Получает список персон, упорядоченных по убыванию количества принадлежащих им патентов.
 
@@ -23,7 +23,7 @@ class CRUDPerson(CRUDBase):
             pagesize (int): Количество элементов на странице.
 
         Returns:
-            List[Dict[str, List | int | Any]]: Список персон с дополнительной информацией.
+            Dict[str, int | list[dict[str, list | int | Any]]]: Список персон с дополнительной информацией.
         """
         skip = (page - 1) * pagesize
 
@@ -56,7 +56,13 @@ class CRUDPerson(CRUDBase):
                 "patent_count": len(patents)
             })
 
-        return persons_list
+        total = await session.execute(
+            select(func.count()).select_from(Person))
+
+        return {
+            "total": total.scalar(),
+            "items": persons_list,
+        }
 
     async def get_person(self, session: AsyncSession, person_tax_number: str) -> dict[str, Any]:
         """

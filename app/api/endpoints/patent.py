@@ -11,17 +11,17 @@ from app.crud.patent import patent_crud
 from app.models import Patent
 from app.patent_parser.parser import create_upload_file
 
-from app.schemas.patent import PatentAdditionalFields, PatentUpdate, PatentDB, PatentCreate
+from app.schemas.patent import PatentsList, PatentAdditionalFields, PatentUpdate, PatentDB, PatentCreate
 
 router = APIRouter()
 
 
-@router.get('/patents', response_model=list[PatentAdditionalFields], status_code=HTTPStatus.OK)
+@router.get('/patents', response_model=PatentsList, status_code=HTTPStatus.OK)
 async def list_patents(
     session: AsyncSession = Depends(get_async_session),
     page: int = 1,
     pagesize: int = 10
-) -> list[PatentAdditionalFields]:
+) -> PatentsList:
 
     """
     Получить список патентов.

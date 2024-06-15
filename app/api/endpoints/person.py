@@ -7,17 +7,17 @@ from app.api.validators import check_person_exists
 from app.core.db import get_async_session
 from app.crud.person import person_crud
 from app.models import Person
-from app.schemas.person import PersonDB, PersonCreate, PersonAdditionalFields, PersonUpdate
+from app.schemas.person import PersonsList, PersonDB, PersonCreate, PersonAdditionalFields, PersonUpdate
 
 router = APIRouter()
 
 
-@router.get("/persons", response_model=list[PersonAdditionalFields], status_code=HTTPStatus.OK)
+@router.get("/persons", response_model=PersonsList, status_code=HTTPStatus.OK)
 async def list_persons(
         session: AsyncSession = Depends(get_async_session),
         page: int = 1,
         pagesize: int = 10
-) -> list[PersonAdditionalFields]:
+) -> PersonsList:
     """
     Получить список персон.
 

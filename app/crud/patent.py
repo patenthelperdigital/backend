@@ -1,4 +1,4 @@
-from typing import Sequence, Any
+from typing import Dict, Sequence, Any
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ class CRUDPatent(CRUDBase):
     def __init__(self):
         super().__init__(Patent)
 
-    async def get_patents_list(self, session: AsyncSession, page: int, pagesize: int) -> list[dict[str, int | list[dict[str, Any]] | Any]]:
+    async def get_patents_list(self, session: AsyncSession, page: int, pagesize: int) -> Dict[str, int | list[dict[str, list | int | Any]]]:
         """
         Получает список патентов, упорядоченных по названию.
 
@@ -23,7 +23,7 @@ class CRUDPatent(CRUDBase):
             pagesize (int): Количество элементов на странице.
 
         Returns:
-            List[Dict[str, int | List[Dict[str, Any]] | Any]]: Список патентов с дополнительной информацией.
+            Dict[str, int | list[dict[str, list | int | Any]]]: Список патентов с дополнительной информацией.
         """
         skip = (page - 1) * pagesize
         stmt = (
@@ -59,7 +59,13 @@ class CRUDPatent(CRUDBase):
                 "author_count": author_count
             })
 
-        return patents_list
+        total = await session.execute(
+            select(func.count()).select_from(Patent))
+
+        return {
+            "total": total.scalar(),
+            "items": patents_list,
+        }
 
     async def get_patent(self, session: AsyncSession, patent_kind: int, patent_reg_number: int) -> dict[str, Any]:
         """

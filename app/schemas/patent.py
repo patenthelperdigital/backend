@@ -1,6 +1,6 @@
 from datetime import date
 from enum import IntEnum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, field_validator
 
@@ -66,3 +66,8 @@ class PatentAdditionalFields(PatentBase):
 class PatentDB(PatentBase):
     class Config:
         orm_mode = True
+
+
+class PatentsList(BaseModel):
+    total: int
+    items: List[PatentAdditionalFields]
