@@ -19,6 +19,8 @@ async def list_patents(
     session: AsyncSession = Depends(get_async_session),
     page: int = 1,
     pagesize: int = 10
+    pagesize: int = 10,
+    filter_id: int = None
 ) -> PatentsList:
 
     """
@@ -32,6 +34,10 @@ async def list_patents(
     Returns:
         List[PatentAdditionalFields]: список патентов с дополнительными полями.
     """
+    if filter_id:
+        patents_with_filter = await patent_crud.get_patents_list_with_filter(session, page, pagesize, filter_id)
+        return patents_with_filter
+
     patents = await patent_crud.get_patents_list(session, page, pagesize)
     return patents
 

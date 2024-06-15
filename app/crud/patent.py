@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.crud.crud_base import CRUDBase
 from app.models import Ownership, Person
+from app.models.filter import FilterTaxNumber
 from app.models.patent import Patent
 from app.schemas.patent import PatentsStats
 
@@ -35,6 +36,7 @@ class CRUDPatent(CRUDBase):
             )
             .outerjoin(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
             .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
+
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
             .group_by(Patent.kind, Patent.reg_number)
             .offset(skip)
@@ -176,6 +178,51 @@ class CRUDPatent(CRUDBase):
         stats["by_author_count"]
 
         return stats
+
+    async def get_patents_list_with_filter(self, session: AsyncSession, page: int, pagesize: int, filter_id: int) -> list[dict[str, int | list[dict[str, Any]] | Any]]:
+        skip = (page - 1) * pagesize
+        tax_numbers_stmt = select(FilterTaxNumber.tax_number).where(FilterTaxNumber.filter_id == filter_id)
+        tax_numbers_result = await session.execute(tax_numbers_stmt)
+        tax_numbers = [row[0] for row in tax_numbers_result.all()]
+
+        stmt = (
+            select(
+                Patent,
+                func.string_agg(Person.short_name, ', ').label("owner_raw"),
+                func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count')
+            )
+
+            .join(Ownership,
+                  (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
+            .join(Person, Person.tax_number == Ownership.person_tax_number)
+            .where(Person.tax_number.in_(tax_numbers))
+            .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
+            .group_by(Patent.kind, Patent.reg_number)
+            .offset(skip)
+            .limit(pagesize)
+        )
+
+        result = await session.execute(stmt)
+        patents = result.all()
+
+        patents_list = []
+        for patent, owner_raw, author_count in patents:
+            patent_holders = [
+                {
+                    "tax_number": ownership.person.tax_number,
+                    "full_name": ownership.person.full_name,
+                }
+                for ownership in patent.ownerships
+            ]
+
+            patents_list.append({
+                **patent.__dict__,
+                "owner_raw": owner_raw,
+                "patent_holders": patent_holders,
+                "author_count": author_count
+            })
+
+        return patents_list
 
 
 patent_crud = CRUDPatent()
