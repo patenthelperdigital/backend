@@ -76,7 +76,7 @@ class PatentParser:
                 subcategory = ", ".join([c.strip()[:4] for c in class_code.split(":")])
 
         country_code_regex = re.compile("\((?a:\w{2})\)")
-        country_codes = Counter(country_code_regex.findall(address))
+        country_codes = Counter(country_code_regex.findall(owner_raw))
         if len(country_codes) == 0 or "(RU)" in country_codes:
             country_code = "RU"
         elif len(country_codes) == 1:

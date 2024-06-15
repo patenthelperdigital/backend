@@ -14,11 +14,16 @@ class OwnershipParser():
     def _parse_row(self, row: pd.Series) -> dict:
         row = row.fillna("")
 
+        patent_kind = int(row["patent_kind"]) if row["patent_kind"].isdigit() else None
+        patent_reg_number = reg_number_to_int(row["patent_number"])
         tax_number = format_tax_number(row["person_tax_number"])
 
+        if not (patent_kind and patent_reg_number and tax_number):
+            return None
+
         return dict(
-            patent_kind=int(row["patent_kind"]),
-            patent_reg_number=reg_number_to_int(row["patent_number"]),
+            patent_kind=patent_kind,
+            patent_reg_number=patent_reg_number,
             person_tax_number=tax_number,
         )
 

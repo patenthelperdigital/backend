@@ -109,7 +109,7 @@ def cli_load_persons(
 
 @app.command("load-ownership")
 def cli_load_ownership(input_file: str):
-    _process_file(input_file, Ownership, OwnershipParser)
+    _process_file(input_file, Ownership, OwnershipParser, commit_every=1)
 
 
 if __name__ == "__main__":

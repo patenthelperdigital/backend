@@ -2,12 +2,12 @@ import re
 from typing import Optional
 
 
-def format_tax_number(tax_number: str) -> str:
+def format_tax_number(tax_number: str) -> Optional[str]:
     if len(tax_number) < 9 or len(tax_number) > 12:
-        return ""
+        return None
 
     if len(tax_number) in (9, 11):
-        return tax_number.ljust(10, "0")
+        return tax_number.rjust(10, "0")
 
     return tax_number
 

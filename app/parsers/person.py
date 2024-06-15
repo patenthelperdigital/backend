@@ -8,14 +8,26 @@ from app.parsers.common import format_tax_number
 
 class PersonParser():
     CHUNKSIZE = 1e3
-    IT_AC_CODES = ["62.01", "62.02", "62.02.1", "62.02.4", "62.03.13", "62.09", "63.11.1"]
+    CAT_AC_CODES = {
+        "Высокотехнологичные ИТ компании": [
+            "62.01", "62.02", "62.02.1", "62.02.4", "62.03.13", "62.09", "63.11.1"
+        ],
+        "Научные организации": [
+            "72", "72.1", "72.11", "72.19", "72.19.1", "72.19.11", "72.19.12",
+            "72.19.2", "72.19.3", "72.19.4", "72.19.9", "72.2", "72.20", "72.20.1",
+            "72.20.11", "72.20.19", "72.20.2"
+        ],
+        "Колледжи": ["85.21"],
+        "ВУЗ": ["85.22", "85.22.1", "85.22.2", "85.22.3", "85.23"],
+     }
 
     def __init__(self, df_path: pathlib.Path):
         self._df_path = df_path
 
-    def _get_category(self, name: str, activity_code: str) -> str:
-        if activity_code in self.IT_AC_CODES:
-            return "ИТ-компания"
+    def _get_category(self, activity_code: str) -> str:
+        for cat, codes in self.CAT_AC_CODES.items():
+            if activity_code.strip() in codes:
+                return cat
 
         return "Прочие организации"
 
@@ -23,6 +35,8 @@ class PersonParser():
         row = row.fillna("")
 
         tax_number = format_tax_number(row["ИНН"])
+        if tax_number is None:
+            return None
 
         if row["ОКОПФ (расшифровка)"] == "Индивидуальные предприниматели":
             kind = 2
@@ -31,11 +45,11 @@ class PersonParser():
 
         try:
             reg_date = datetime.datetime.fromisoformat(
-                row["creation_date"]).date()
+                row["Дата создания"]).date()
         except:
             reg_date = None
 
-        category = self._get_category(row["Наименование полное"], row["ОКВЭД2"])
+        category = self._get_category(row["ОКВЭД2"])
 
         return dict(
             kind=kind,
