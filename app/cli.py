@@ -19,7 +19,7 @@ CHUNKSIZE = 1e3
 load_dotenv()
 
 app = typer.Typer()
-db_url = os.getenv("DATABASE_URL_CLI")
+db_url = os.getenv("DATABASE_CLI_URL")
 engine = create_engine(db_url)
 
 
