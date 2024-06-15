@@ -29,7 +29,7 @@ class CRUDPerson(CRUDBase):
 
         stmt = (
             select(Person)
-            .join(Ownership, Ownership.person_tax_number == Person.tax_number)
+            .outerjoin(Ownership, Ownership.person_tax_number == Person.tax_number)
             .options(selectinload(Person.ownerships).selectinload(Ownership.patent))
             .group_by(Person.tax_number)
             .order_by(func.count(Ownership.patent_reg_number).desc())
@@ -65,7 +65,7 @@ class CRUDPerson(CRUDBase):
         """
         stmt = (
             select(Person, func.count(Ownership.patent_reg_number).label("patent_count"))
-            .join(Ownership, Ownership.person_tax_number == Person.tax_number)
+            .outerjoin(Ownership, Ownership.person_tax_number == Person.tax_number)
             .options(selectinload(Person.ownerships).selectinload(Ownership.patent))
             .group_by(Person.tax_number)
             .where(Person.tax_number == person_tax_number)
