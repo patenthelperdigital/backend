@@ -42,12 +42,18 @@ class CRUDPerson(CRUDBase):
 
         persons_list = []
         for person in persons:
-            patent_ids = [ownership.patent_reg_number for ownership in person.ownerships]
+            patents = [
+                {
+                    "kind": ownership.patent_kind,
+                    "reg_number": ownership.patent_reg_number
+                }
+                for ownership in person.ownerships
+            ]
             persons_list.append({
                 **person.__dict__,
                 "category": person.category,
-                "patent_ids": patent_ids,
-                "patent_count": len(patent_ids)
+                "patents": patents,
+                "patent_count": len(patents)
             })
 
         return persons_list
@@ -61,7 +67,7 @@ class CRUDPerson(CRUDBase):
             person_tax_number (str): Идентификатор персоны.
 
         Returns:
-            Dict[str, Any]: Словарь с информацией о персоне, включая список идентификаторов патентов и количество патентов.
+            Dict[str, Any]: Словарь с информацией о персоне, включая список патентов и количество патентов.
         """
         stmt = (
             select(Person, func.count(Ownership.patent_reg_number).label("patent_count"))
@@ -73,13 +79,19 @@ class CRUDPerson(CRUDBase):
         result = await session.execute(stmt)
         person, patent_count = result.unique().one_or_none()
 
-        patent_ids = [ownership.patent_reg_number for ownership in person.ownerships]
+        patents = [
+            {
+                "kind": ownership.patent_kind,
+                "reg_number": ownership.patent_reg_number
+            }
+            for ownership in person.ownerships
+        ]
 
         return {
             **person.__dict__,
             "category": person.category,
-            "patent_ids": patent_ids,
-            "patent_count": patent_count,
+            "patents": patents,
+            "patent_count": len(patents),
         }
 
 

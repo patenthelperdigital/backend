@@ -43,9 +43,14 @@ class PersonUpdate(PersonBase):
     pass
 
 
+class PersonPatents(BaseModel):
+    kind: int
+    reg_number: int
+
+
 class PersonAdditionalFields(PersonBase):
     category: str
-    patent_ids: list[int] = []
+    patents: list[PersonPatents] = []
     patent_count: int = 0
 
     class Config:
