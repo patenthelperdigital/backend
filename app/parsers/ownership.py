@@ -40,7 +40,7 @@ class OwnershipParser():
 
     def setup(self):
         print("Setting up parser")
-        df = pd.read_csv(self._df, chunksize=self.CHUNKSIZE)
+        df = pd.read_csv(self._df_path, chunksize=self.CHUNKSIZE)
         chunk = df.get_chunk(1)
 
         if "patent_number" not in chunk.columns:
