@@ -10,7 +10,6 @@ import tqdm
 import typer
 from typing_extensions import Annotated
 
-from app.core.db import get_async_session
 from app.models import Ownership, Patent, Person
 from app.parsers import OwnershipParser, PatentParser, PersonParser
 
