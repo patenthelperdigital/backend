@@ -61,6 +61,7 @@ def _process_file(
         print("Incorrect input file")
         return
 
+    success, error = 0, 0
     with Session(engine) as session:
         for i, item in enumerate(tqdm.tqdm(parser.parse())):
             if item is None:
@@ -72,11 +73,14 @@ def _process_file(
             if i > 0 and i % commit_every == 0:
                 try:
                     session.commit()
+                    success += 1 * commit_every
                 except Exception as e:
                     session.rollback()
                     print(f"Error while trying to insert portion #{i} of data to table: {e}")
+                    error += 1 * commit_every
 
     print("Completed")
+    print(f"Inserted {success} records, failed to insert {error} records")
 
 
 @app.command("load-patents")
