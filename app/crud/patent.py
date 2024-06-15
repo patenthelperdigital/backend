@@ -1,12 +1,13 @@
-from typing import Dict, Sequence, Any
+from typing import Dict, Sequence, Any, Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import case, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.crud.crud_base import CRUDBase
 from app.models import Ownership, Person
 from app.models.patent import Patent
+from app.schemas.patent import PatentsStats
 
 
 class CRUDPatent(CRUDBase):
@@ -109,6 +110,72 @@ class CRUDPatent(CRUDBase):
             "patent_holders": patent_holders,
             "author_count": author_count
         }
+
+    async def get_stats(
+        self, session: AsyncSession, filter_id: Optional[int] = None
+    ) -> dict:
+        """
+        Статистика по патентам.
+
+        Args:
+        session (AsyncSession): асинхронная сессия базы данных.
+        filter_id (Optional[int]): опциональный идентификатор загруженного фильтра по списку ИНН.
+
+        Returns:
+            dict: словарь со статистикой.
+        """
+        stats = {}
+
+        total = await session.execute(
+            select(func.count()).select_from(Patent)
+        )
+        stats["total_patents"] = total.scalar()
+
+        total_ru = await session.execute(
+            select(func.count()).select_from(Patent).filter_by(country_code="RU")
+        )
+        stats["total_ru_patents"] = total_ru.scalar()
+
+        total_with_holders = await session.execute(
+            select(func.count(func.distinct(Patent.kind, Patent.reg_number)))
+            .select_from(Patent)
+            .join(Ownership)
+        )
+        stats["total_with_holders"] = total_with_holders.scalar()
+
+        total_ru_with_holders = await session.execute(
+            select(func.count(func.distinct(Patent.kind, Patent.reg_number)))
+            .select_from(Patent)
+            .filter_by(country_code="RU")
+            .join(Ownership)
+        )
+        stats["total_ru_with_holders"] = total_ru_with_holders.scalar()
+
+        stats["with_holders_percent"] = int(round(
+            100 * stats["total_with_holders"] / stats["total_patents"]))
+        stats["ru_with_holders_percent"] = int(round(
+            100 * stats["total_ru_with_holders"] / stats["total_ru_patents"]))
+
+        by_author_count = await session.execute(
+            select(
+                case(
+                    (Patent.author_count == 0, "0"),
+                    (Patent.author_count == 1, "1"),
+                    (Patent.author_count <= 5, "2–5"),
+                    else_="5+"
+                ).label("author_count_group"),
+                func.count()
+            )
+            .select_from(Patent)
+            .group_by("author_count_group")
+        )
+        stats["by_author_count"] = {
+            row[0]: row[1]
+            for row in by_author_count.all()
+        }
+        stats["by_author_count"]
+
+        return stats
 
 
 patent_crud = CRUDPatent()
