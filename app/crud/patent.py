@@ -30,10 +30,10 @@ class CRUDPatent(CRUDBase):
             select(
                 Patent,
                 func.string_agg(Person.short_name, ', ').label("owner_raw"),
-                func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count')
+                func.coalesce(func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count'), 0)
             )
-            .join(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
-            .join(Person, Person.tax_number == Ownership.person_tax_number)
+            .outerjoin(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
+            .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
             .group_by(Patent.kind, Patent.reg_number)
             .offset(skip)
@@ -78,10 +78,10 @@ class CRUDPatent(CRUDBase):
             select(
                 Patent,
                 func.string_agg(Person.short_name, ', ').label("owner_raw"),
-                func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count')
+                func.coalesce(func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count'), 0)
             )
-            .join(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
-            .join(Person, Person.tax_number == Ownership.person_tax_number)
+            .outerjoin(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
+            .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
             .group_by(Patent.kind, Patent.reg_number)
             .where((Patent.kind == patent_kind) & (Patent.reg_number == patent_reg_number))

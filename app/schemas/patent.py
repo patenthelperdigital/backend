@@ -24,19 +24,20 @@ class PatentHolder(BaseModel):
 
 class PatentBase(BaseModel):
     reg_number: int
-    reg_date: Optional[date]
-    appl_date: Optional[date]
-    author_raw: Optional[str]
-    owner_raw: Optional[str]
-    address: Optional[str]
+    reg_date: Optional[date] = None
+    appl_date: Optional[date] = None
+    author_raw: Optional[str] = None
+    owner_raw: Optional[str] = None
+    address: Optional[str] = None
     name: str
     actual: bool
-    category: Optional[str]
-    subcategory: Optional[str]
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
     kind: int
     author_count: int
-    region: Optional[str]
-    city: Optional[str]
+    country_code: Optional[str] = None
+    region: Optional[str] = None
+    city: Optional[str] = None
 
     @field_validator('kind')
     @classmethod
