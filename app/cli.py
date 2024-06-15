@@ -12,7 +12,7 @@ from typing_extensions import Annotated
 
 from app.core.db import get_async_session
 from app.models import Ownership, Patent, Person
-from app.parsers.patent import Parser
+from app.parsers import OwnershipParser, PatentParser, PersonParser
 
 
 CHUNKSIZE = 1e3
@@ -24,15 +24,15 @@ db_url = os.getenv("DATABASE_URL_CLI")
 engine = create_engine(db_url)
 
 
-def ensure_proceed(model):
-    stmt = select(func.count()).select_from(model)
+def _ensure_proceed(model_cls):
+    stmt = select(func.count()).select_from(model_cls)
 
     with Session(engine) as session:
         cnt = session.execute(stmt).scalar()
 
     if cnt > 0:
         print(
-            f"Patents table already contains {cnt} records."
+            f"{model_cls.__name__} table already contains {cnt} records."
             " Are you sure you want to continue?"
             " New records will be added, existing will be preserved.\n"
             " y = yes, any other = exit"
@@ -43,6 +43,41 @@ def ensure_proceed(model):
             return False
 
     return True
+
+
+def _process_file(
+    filename: pathlib.Path,
+    model_cls,
+    parser_cls,
+    commit_every: int = 1e3,
+):
+    if not _ensure_proceed(model_cls):
+        return
+
+    print(f"Loading data from file {filename} to {model_cls.__name__} table")
+
+    parser = parser_cls(filename)
+    if not parser.setup():
+        print("Incorrect input file")
+        return
+
+    with Session(engine) as session:
+        for i, item in enumerate(tqdm.tqdm(parser.parse())):
+            if item is None:
+                continue
+
+            record = model_cls(**item)
+            session.add(record)
+
+            if i > 0 and i % commit_every == 0:
+                try:
+                    session.commit()
+                except Exception as e:
+                    session.rollback()
+                    print(f"Error while trying to insert portion #{i} of data to table: {e}")
+
+    print("Completed")
+
 
 @app.command("load-patents")
 def cli_load_patents(
@@ -55,45 +90,26 @@ def cli_load_patents(
         )
     ]
 ):
-    if not ensure_proceed(Patent):
-        return
-
-    print(f"Loading data from file {input_file} to patents table")
-
-    parser = Parser(input_file)
-    if not parser.setup():
-        print("Incorrect input file")
-        return
-
-    with Session(engine) as session:
-        for i, item in enumerate(tqdm.tqdm(parser.parse())):
-            if item is None:
-                continue
-
-            record = Patent(**item)
-            session.add(record)
-
-            if i > 0 and i % 1000 == 0:
-                try:
-                    session.commit()
-                except Exception as e:
-                    session.rollback()
-                    print(f"Error while trying to insert portion #{i} of data to table: {e}")
-
-            if i > 2000:
-                break
-
-    print("Completed")
+    _process_file(input_file, Patent, PatentParser)
 
 
 @app.command("load-persons")
-def cli_load_persons(input_file: str):
-    ...
+def cli_load_persons(
+    input_file: Annotated[
+        pathlib.Path,
+        typer.Argument(
+            exists=True,
+            file_okay=True,
+            dir_okay=False
+        )
+    ]
+):
+    _process_file(input_file, Person, PersonParser)
 
 
 @app.command("load-ownership")
 def cli_load_ownership(input_file: str):
-    ...
+    _process_file(input_file, Ownership, OwnershipParser)
 
 
 if __name__ == "__main__":

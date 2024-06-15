@@ -6,8 +6,10 @@ from typing import Optional, Tuple
 
 import pandas as pd
 
+from app.parsers.common import reg_number_to_int
 
-class Parser:
+
+class PatentParser:
     CHUNKSIZE = 1e3
 
     def __init__(self, df: str):
@@ -43,17 +45,7 @@ class Parser:
     def _parse_row(self, row: pd.Series) -> dict:
         row = row.fillna("")
 
-        reg_number = row.get("registration number")
-        if reg_number is None:
-            return None
-        elif reg_number.isdigit():
-            reg_number = int(reg_number)
-        else:
-            reg_number = re.search("\d+", reg_number)
-            if reg_number is not None:
-                reg_number = int(reg_number[0])
-            else:
-                return None
+        reg_number = reg_number_to_int(row.get("registration number"))
 
         try:
             reg_date = datetime.datetime.strptime(
@@ -139,6 +131,7 @@ class Parser:
         if "registration number" not in chunk.columns:
             print("Column 'Registration number' not found in data")
             return False
+
         print("Data seems to be correct")
 
         kind, name_col = self._detect_kind_and_name_col(chunk)
