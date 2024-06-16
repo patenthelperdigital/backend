@@ -35,11 +35,7 @@ class CRUDPatent(CRUDBase):
         """
         skip = (page - 1) * pagesize
         stmt = (
-            select(
-                Patent,
-                func.string_agg(Person.short_name, ', ').label("owner_raw"),
-                func.coalesce(func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count'), 0)
-            )
+            select(Patent)
             .outerjoin(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
             .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
@@ -58,20 +54,18 @@ class CRUDPatent(CRUDBase):
         patents = result.all()
 
         patents_list = []
-        for patent, owner_raw, author_count in patents:
+        for patent in patents:
             patent_holders = [
                 {
                     "tax_number": ownership.person.tax_number,
                     "full_name": ownership.person.full_name,
                 }
-                for ownership in patent.ownerships
+                for ownership in patent[0].ownerships
             ]
 
             patents_list.append({
-                **patent.__dict__,
-                "owner_raw": owner_raw,
+                **patent[0].__dict__,
                 "patent_holders": patent_holders,
-                "author_count": author_count
             })
 
         total = await session.execute(
@@ -271,11 +265,7 @@ class CRUDPatent(CRUDBase):
         tax_numbers = [row[0] for row in tax_numbers_result.all()]
 
         stmt = (
-            select(
-                Patent,
-                func.string_agg(Person.short_name, ', ').label("owner_raw"),
-                func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count')
-            )
+            select(Patent)
             .outerjoin(Ownership,
                   (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
             .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
@@ -290,20 +280,18 @@ class CRUDPatent(CRUDBase):
         patents = result.all()
 
         patents_list = []
-        for patent, owner_raw, author_count in patents:
+        for patent in patents:
             patent_holders = [
                 {
                     "tax_number": ownership.person.tax_number,
                     "full_name": ownership.person.full_name,
                 }
-                for ownership in patent.ownerships
+                for ownership in patent[0].ownerships
             ]
 
             patents_list.append({
-                **patent.__dict__,
-                "owner_raw": owner_raw,
+                **patent[0].__dict__,
                 "patent_holders": patent_holders,
-                "author_count": author_count
             })
 
         total = await session.execute(
