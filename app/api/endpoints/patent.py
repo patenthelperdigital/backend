@@ -157,5 +157,5 @@ async def send_patent_file(file: UploadFile):
            Response: Ответ сервера с созданным файлом Excel или сообщением об ошибке.
 
     """
-    await create_upload_file(file)
+    return await create_upload_file(file)
 
