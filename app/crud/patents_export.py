@@ -61,7 +61,7 @@ async def get_export_patent_file(
                 (Person.kind == 2, 'Физлицо/ИП'),
                 else_='неизвестно'
             ).label('person_kind'),
-            Person.category,
+            Person.category.label("person_category"),
             Person.full_name,
         )
         .join(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
@@ -89,7 +89,7 @@ async def get_export_patent_file(
         {
             "ИНН": patent.tax_number,
             "Вид": patent.person_kind,
-            "Категория": patent.category,
+            "Категория": patent.person_category,
             "Полное наименование": patent.full_name,
             "Регистрационный номер патента": patent.reg_number,
             "Вид патента": patent.patent_kind,
