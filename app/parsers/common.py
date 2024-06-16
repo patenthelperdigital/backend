@@ -3,11 +3,13 @@ from typing import Optional
 
 
 def format_tax_number(tax_number: str) -> Optional[str]:
-    if len(tax_number) < 9 or len(tax_number) > 12:
+    tn_len = len(tax_number)
+
+    if tn_len < 9 or tn_len > 12:
         return None
 
-    if len(tax_number) in (9, 11):
-        return tax_number.rjust(10, "0")
+    if tn_len in (9, 11):
+        return tax_number.rjust(tn_len + 1, "0")
 
     return tax_number
 

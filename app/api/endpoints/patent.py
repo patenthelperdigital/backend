@@ -18,13 +18,14 @@ router = APIRouter()
 
 @router.get('/patents', response_model=PatentsList, status_code=HTTPStatus.OK)
 async def list_patents(
-        page: int = 1,
-        pagesize: int = 10,
-        filter_id: Optional[int] = None,
-        kind: Optional[int] = None,
-        actual: Optional[bool] = None,
-        session: AsyncSession = Depends(get_async_session),
+    page: int = 1,
+    pagesize: int = 10,
+    filter_id: Optional[int] = None,
+    kind: Optional[int] = None,
+    actual: Optional[bool] = None,
+    session: AsyncSession = Depends(get_async_session),
 ) -> PatentsList:
+
     """
     Получить список патентов.
 
@@ -64,7 +65,7 @@ async def get_patents_stats(
     return stats
 
 
-@router.post('/patent', response_model=PatentDB, status_code=HTTPStatus.CREATED)
+@router.post('/patents', response_model=PatentDB, status_code=HTTPStatus.CREATED)
 async def create_patent(
         patent: PatentCreate,
         session: AsyncSession = Depends(get_async_session)
@@ -83,8 +84,8 @@ async def create_patent(
     return new_patent
 
 
-@router.get('/patent/{patent_kind}/{patent_reg_number}', response_model=PatentAdditionalFields,
-            status_code=HTTPStatus.OK)
+
+@router.get('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentAdditionalFields, status_code=HTTPStatus.OK)
 async def get_patent(
         patent_kind: int,
         patent_reg_number: int,
@@ -105,7 +106,7 @@ async def get_patent(
     return patent
 
 
-@router.patch('/patent/{patent_kind}/{patent_reg_number}', response_model=PatentDB, status_code=HTTPStatus.OK)
+@router.patch('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentDB, status_code=HTTPStatus.OK)
 async def update_patent(
         patent_kind: int,
         patent_reg_number: int,
@@ -129,7 +130,7 @@ async def update_patent(
     return updated_patent
 
 
-@router.delete('/patent/{patent_kind}/{patent_reg_number}', status_code=HTTPStatus.NO_CONTENT)
+@router.delete('/patents/{patent_kind}/{patent_reg_number}', status_code=HTTPStatus.NO_CONTENT)
 async def delete_patent(
         patent_kind: int,
         patent_reg_number: int,
@@ -159,7 +160,7 @@ async def send_patent_file(file: UploadFile):
            Response: Ответ сервера с созданным файлом Excel или сообщением об ошибке.
 
     """
-    await create_upload_file(file)
+    return await create_upload_file(file)
 
 
 @router.get("/patents/export", response_class=StreamingResponse)

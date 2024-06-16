@@ -8,7 +8,7 @@ from app.api.validators import check_person_exists
 from app.core.db import get_async_session
 from app.crud.person import person_crud
 from app.models import Person
-from app.schemas.person import PersonsList, PersonDB, PersonCreate, PersonAdditionalFields, PersonUpdate
+from app.schemas.person import PersonsList, PersonsStats, PersonDB, PersonCreate, PersonAdditionalFields, PersonUpdate
 
 router = APIRouter()
 
@@ -37,7 +37,27 @@ async def list_persons(
     return persons
 
 
-@router.post("/person", response_model=PersonDB, status_code=HTTPStatus.CREATED)
+@router.get("/persons/stats", response_model=PersonsStats, status_code=HTTPStatus.OK)
+async def get_persons_stats(
+    filter_id: Optional[int] = None,
+    session: AsyncSession = Depends(get_async_session)
+) -> PersonsStats:
+    """
+    Получить статистику по персонам.
+
+    Args:
+        filter_id (Optional[int]): опциональный идентификатор загруженного фильтра по списку ИНН.
+        session (AsyncSession): асинхронная сессия базы данных.
+
+    Returns:
+        PersonsStats: словарь со статистикой.
+    """
+    stats = await person_crud.get_stats(session, filter_id)
+
+    return stats
+
+
+@router.post("/persons", response_model=PersonDB, status_code=HTTPStatus.CREATED)
 async def create_person(
         person: PersonCreate,
         session: AsyncSession = Depends(get_async_session)
@@ -56,7 +76,7 @@ async def create_person(
     return new_person
 
 
-@router.get("/person/{person_tax_number}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
+@router.get("/persons/{person_tax_number}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
 async def get_person(
         person_tax_number: str,
         session: AsyncSession = Depends(get_async_session)
@@ -75,7 +95,7 @@ async def get_person(
     return person
 
 
-@router.patch('/person/{person_tax_number}', response_model=PersonDB, status_code=HTTPStatus.OK)
+@router.patch('/persons/{person_tax_number}', response_model=PersonDB, status_code=HTTPStatus.OK)
 async def update_person(
         person_tax_number: str,
         obj_in: PersonUpdate,
@@ -97,7 +117,7 @@ async def update_person(
     return updated_person
 
 
-@router.delete('/person/{person_tax_number}', status_code=HTTPStatus.NO_CONTENT)
+@router.delete('/persons/{person_tax_number}', status_code=HTTPStatus.NO_CONTENT)
 async def delete_person(
         person_tax_number: str,
         session: AsyncSession = Depends(get_async_session)

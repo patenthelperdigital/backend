@@ -10,7 +10,7 @@ from app.schemas.filter import FilterDB, FilterCreate
 router = APIRouter()
 
 
-@router.post("/filter", response_model=FilterDB)
+@router.post("/filters", response_model=FilterDB)
 async def create_filter(name: str, file: UploadFile, session: AsyncSession = Depends(get_async_session)):
     """
     Создает новый фильтр на основе загруженного Excel-файла.
@@ -51,7 +51,7 @@ async def read_filters(session: AsyncSession = Depends(get_async_session)):
     return await filter_crud.get_filters(session)
 
 
-@router.get("/filter/{filter_id}", response_model=FilterDB)
+@router.get("/filters/{filter_id}", response_model=FilterDB)
 async def read_filter(filter_id: int, session: AsyncSession = Depends(get_async_session)):
     """
     Получает фильтр по его идентификатору.
@@ -72,7 +72,7 @@ async def read_filter(filter_id: int, session: AsyncSession = Depends(get_async_
     return db_filter
 
 
-@router.put("/filter/{filter_id}", response_model=FilterDB)
+@router.put("/filters/{filter_id}", response_model=FilterDB)
 async def update_filter(filter_id: int, name: str, session: AsyncSession = Depends(get_async_session)):
     """
     Обновляет имя существующего фильтра.
@@ -88,7 +88,7 @@ async def update_filter(filter_id: int, name: str, session: AsyncSession = Depen
     return await filter_crud.update_filter_name(session, filter_id, name)
 
 
-@router.delete("/filter/{filter_id}", response_model=FilterDB)
+@router.delete("/filters/{filter_id}", response_model=FilterDB)
 async def delete_filter(filter_id: int, session: AsyncSession = Depends(get_async_session)):
     """
     Удаляет существующий фильтр.
