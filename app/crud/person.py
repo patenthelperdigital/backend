@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,22 @@ class CRUDPerson(CRUDBase):
     def __init__(self):
         super().__init__(Person)
 
-    async def get_persons_list(self, session: AsyncSession, page: int, pagesize: int) -> Dict[str, int | list[dict[str, list | int | Any]]]:
+    CATEGORY_MAPPING = {
+        1: "ВУЗ",
+        2: "Высокотехнологичные ИТ компании",
+        3: "Колледжи",
+        4: "Научные организации",
+        5: "Прочие организации",
+    }
+
+    async def get_persons_list(
+            self, session: AsyncSession,
+            page: int,
+            pagesize: int,
+            kind: Optional[int] = None,
+            active: Optional[bool] = None,
+            category: Optional[int] = None
+    ) -> Dict[str, int | list[dict[str, list | int | Any]]]:
         """
         Получает список персон, упорядоченных по убыванию количества принадлежащих им патентов.
 
@@ -36,6 +51,12 @@ class CRUDPerson(CRUDBase):
             .offset(skip)
             .limit(pagesize)
         )
+        if kind is not None:
+            stmt = stmt.where(Person.kind == kind)
+        if active is not None:
+            stmt = stmt.where(Person.active == active)
+        if category is not None:
+            stmt = stmt.where(Person.category == self.CATEGORY_MAPPING.get(category))
 
         result = await session.execute(stmt)
         persons = result.scalars().all()

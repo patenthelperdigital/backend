@@ -1,8 +1,8 @@
-"""new migrate
+"""i love alembic
 
-Revision ID: 11f5d6b05ecd
+Revision ID: d3aeaddf7f9a
 Revises: 
-Create Date: 2024-06-15 13:29:41.167368
+Create Date: 2024-06-16 14:50:37.583909
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '11f5d6b05ecd'
+revision: str = 'd3aeaddf7f9a'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -41,6 +41,7 @@ def upgrade() -> None:
     sa.Column('category', sa.String(), nullable=True),
     sa.Column('subcategory', sa.String(), nullable=True),
     sa.Column('kind', sa.Integer(), nullable=False),
+    sa.Column('country_code', sa.String(length=10), nullable=True),
     sa.Column('region', sa.String(), nullable=True),
     sa.Column('city', sa.String(), nullable=True),
     sa.Column('author_count', sa.Integer(), nullable=True),
