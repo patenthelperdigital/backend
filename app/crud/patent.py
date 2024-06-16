@@ -191,10 +191,9 @@ class CRUDPatent(CRUDBase):
                 func.string_agg(Person.short_name, ', ').label("owner_raw"),
                 func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count')
             )
-
-            .join(Ownership,
+            .outerjoin(Ownership,
                   (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
-            .join(Person, Person.tax_number == Ownership.person_tax_number)
+            .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
             .where(Person.tax_number.in_(tax_numbers))
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
             .group_by(Patent.kind, Patent.reg_number)
@@ -222,7 +221,16 @@ class CRUDPatent(CRUDBase):
                 "author_count": author_count
             })
 
-        return patents_list
+        total = await session.execute(
+            select(func.count())
+            .select_from(Patent)
+            .outerjoin(Ownership)
+            .where(Ownership.person_tax_number.in_(tax_numbers)))
+
+        return {
+            "total": total.scalar(),
+            "items": patents_list,
+        }
 
 
 patent_crud = CRUDPatent()

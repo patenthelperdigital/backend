@@ -16,11 +16,10 @@ router = APIRouter()
 
 @router.get('/patents', response_model=PatentsList, status_code=HTTPStatus.OK)
 async def list_patents(
-    session: AsyncSession = Depends(get_async_session),
     page: int = 1,
-    pagesize: int = 10
     pagesize: int = 10,
-    filter_id: int = None
+    filter_id: Optional[int] = None,
+    session: AsyncSession = Depends(get_async_session),
 ) -> PatentsList:
 
     """

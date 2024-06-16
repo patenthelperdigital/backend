@@ -70,7 +70,7 @@ class PatentDB(PatentBase):
 
 class PatentsList(BaseModel):
     total: int
-    items: List[PatentAdditionalFields]
+    items: Optional[List[PatentAdditionalFields]]
 
 
 class PatentsStats(BaseModel):
