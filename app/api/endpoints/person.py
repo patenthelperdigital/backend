@@ -33,7 +33,7 @@ async def list_persons(
     return persons
 
 
-@router.post("/person", response_model=PersonDB, status_code=HTTPStatus.CREATED)
+@router.post("/persons", response_model=PersonDB, status_code=HTTPStatus.CREATED)
 async def create_person(
         person: PersonCreate,
         session: AsyncSession = Depends(get_async_session)
@@ -52,7 +52,7 @@ async def create_person(
     return new_person
 
 
-@router.get("/person/{person_tax_number}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
+@router.get("/persons/{person_tax_number}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
 async def get_person(
         person_tax_number: str,
         session: AsyncSession = Depends(get_async_session)
@@ -71,7 +71,7 @@ async def get_person(
     return person
 
 
-@router.patch('/person/{person_tax_number}', response_model=PersonDB, status_code=HTTPStatus.OK)
+@router.patch('/persons/{person_tax_number}', response_model=PersonDB, status_code=HTTPStatus.OK)
 async def update_person(
         person_tax_number: str,
         obj_in: PersonUpdate,
@@ -93,7 +93,7 @@ async def update_person(
     return updated_person
 
 
-@router.delete('/person/{person_tax_number}', status_code=HTTPStatus.NO_CONTENT)
+@router.delete('/persons/{person_tax_number}', status_code=HTTPStatus.NO_CONTENT)
 async def delete_person(
         person_tax_number: str,
         session: AsyncSession = Depends(get_async_session)
