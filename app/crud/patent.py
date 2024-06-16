@@ -16,7 +16,8 @@ class CRUDPatent(CRUDBase):
         super().__init__(Patent)
 
     async def get_patents_list(
-            self, session: AsyncSession,
+            self,
+            session: AsyncSession,
             page: int,
             pagesize: int,
             kind: Optional[int] = None,
