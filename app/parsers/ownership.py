@@ -31,9 +31,6 @@ class OwnershipParser():
         df = pd.read_csv(self._df_path, dtype=str, chunksize=self.CHUNKSIZE)
 
         for chunk in df:
-            chunk.dropna(subset=["person_tax_number"], how="any", inplace=True)
-            chunk.drop_duplicates(subset=["patent_number"], inplace=True)
-
             for _, row in chunk.iterrows():
                 data = self._parse_row(row)
                 yield data
