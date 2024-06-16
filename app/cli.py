@@ -78,6 +78,14 @@ def _process_file(
                     print(f"Error while trying to insert portion #{i} of data to table: {e}")
                     error += 1 * commit_every
 
+        try:
+            session.commit()
+            success += 1 * commit_every
+        except Exception as e:
+            session.rollback()
+            print(f"Error while trying to insert portion #{i} of data to table: {e}")
+            error += 1 * commit_every
+
     print("Completed")
     print(f"Inserted {success} records, failed to insert {error} records")
 
