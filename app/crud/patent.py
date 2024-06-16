@@ -15,7 +15,13 @@ class CRUDPatent(CRUDBase):
     def __init__(self):
         super().__init__(Patent)
 
-    async def get_patents_list(self, session: AsyncSession, page: int, pagesize: int) -> Dict[str, int | list[dict[str, list | int | Any]]]:
+    async def get_patents_list(
+            self, session: AsyncSession,
+            page: int,
+            pagesize: int,
+            kind: Optional[int] = None,
+            actual: Optional[bool] = None
+    ) -> Dict[str, int | list[dict[str, list | int | Any]]]:
         """
         Получает список патентов, упорядоченных по названию.
 
@@ -42,6 +48,12 @@ class CRUDPatent(CRUDBase):
             .offset(skip)
             .limit(pagesize)
         )
+
+        if kind is not None:
+            stmt = stmt.where(Patent.kind == kind)
+        if actual is not None:
+            stmt = stmt.where(Patent.actual == actual)
+
         result = await session.execute(stmt)
         patents = result.all()
 

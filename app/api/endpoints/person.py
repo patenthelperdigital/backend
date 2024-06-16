@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +17,10 @@ router = APIRouter()
 async def list_persons(
         session: AsyncSession = Depends(get_async_session),
         page: int = 1,
-        pagesize: int = 10
+        pagesize: int = 10,
+        kind: Optional[int] = None,
+        active: Optional[bool] = None,
+        category: Optional[int] = None
 ) -> PersonsList:
     """
     Получить список персон.
@@ -29,7 +33,7 @@ async def list_persons(
     Returns:
         List[PersonAdditionalFields]: список персон с дополнительными полями.
     """
-    persons = await person_crud.get_persons_list(session, page, pagesize)
+    persons = await person_crud.get_persons_list(session, page, pagesize, kind, active, category)
     return persons
 
 

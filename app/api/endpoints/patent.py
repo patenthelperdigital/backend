@@ -19,6 +19,8 @@ async def list_patents(
     page: int = 1,
     pagesize: int = 10,
     filter_id: Optional[int] = None,
+    kind: Optional[int] = None,
+    actual: Optional[bool] = None,
     session: AsyncSession = Depends(get_async_session),
 ) -> PatentsList:
 
@@ -37,7 +39,7 @@ async def list_patents(
         patents_with_filter = await patent_crud.get_patents_list_with_filter(session, page, pagesize, filter_id)
         return patents_with_filter
 
-    patents = await patent_crud.get_patents_list(session, page, pagesize)
+    patents = await patent_crud.get_patents_list(session, page, pagesize, kind, actual)
     return patents
 
 

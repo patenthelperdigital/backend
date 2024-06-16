@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from typing import List
 
 from app.core.db import get_async_session
@@ -15,10 +14,12 @@ router = APIRouter()
 async def create_filter(name: str, file: UploadFile, session: AsyncSession = Depends(get_async_session)):
     if file.content_type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
         raise HTTPException(status_code=400, detail="Данный формат файла не поддерживается.")
-
-    filter_in = FilterCreate(name=name, filename=file.filename)
-    file_bytes = await file.read()
-    return await filter_crud.create_filter(session, filter_in, file_bytes)
+    try:
+        filter_in = FilterCreate(name=name, filename=file.filename)
+        file_bytes = await file.read()
+        return await filter_crud.create_filter(session, filter_in, file_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/filters", response_model=List[FilterDB])
