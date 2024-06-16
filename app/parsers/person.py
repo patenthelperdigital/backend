@@ -64,7 +64,7 @@ class PersonParser():
         )
 
     def parse(self):
-        df = pd.read_csv(self._df_path, sep=";", dtype=str, chunksize=self.CHUNKSIZE)
+        df = pd.read_csv(self._df_path, sep=",", dtype=str, chunksize=self.CHUNKSIZE)
 
         for chunk in df:
             chunk.dropna(subset=["Наименование полное", "ИНН"], how="any", inplace=True)
@@ -77,7 +77,7 @@ class PersonParser():
 
     def setup(self):
         print("Setting up parser")
-        df = pd.read_csv(self._df_path, sep=";", chunksize=self.CHUNKSIZE)
+        df = pd.read_csv(self._df_path, sep=",", chunksize=self.CHUNKSIZE)
         chunk = df.get_chunk(1)
 
         if "ИНН" not in chunk.columns:
