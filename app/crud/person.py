@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.crud.crud_base import CRUDBase
 from app.models import Ownership
+from app.models.filter import FilterTaxNumber
 from app.models.person import Person
 
 
@@ -84,6 +85,79 @@ class CRUDPerson(CRUDBase):
             "total": total.scalar(),
             "items": persons_list,
         }
+
+    async def get_stats(
+        self, session: AsyncSession, filter_id: Optional[int] = None
+    ) -> dict:
+        """
+        Статистика по персонам.
+
+        Args:
+        session (AsyncSession): асинхронная сессия базы данных.
+        filter_id (Optional[int]): опциональный идентификатор загруженного фильтра по списку ИНН.
+
+        Returns:
+            dict: словарь со статистикой.
+        """
+        stats = {}
+
+        total_persons_stmt = (
+            select(func.count()).select_from(Person)
+        )
+        if filter_id is not None:
+            total_persons_stmt = (
+                total_persons_stmt
+                .join(
+                    FilterTaxNumber,
+                    Person.tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        total_persons_res = await session.execute(total_persons_stmt)
+        stats["total_persons"] = total_persons_res.scalar()
+
+        by_kind_stmt = (
+            select(Person.kind, func.count())
+            .select_from(Person)
+            .group_by(Person.kind)
+        )
+        if filter_id is not None:
+            by_kind_stmt = (
+                by_kind_stmt
+                .join(
+                    FilterTaxNumber,
+                    Person.tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        by_kind_res = await session.execute(by_kind_stmt)
+        stats["by_kind"] = {
+            res[0]: res[1]
+            for res in by_kind_res.all()
+        }
+
+        by_category_stmt = (
+            select(Person.category, func.count())
+            .select_from(Person)
+            .group_by(Person.category)
+        )
+        if filter_id is not None:
+            by_category_stmt = (
+                by_category_stmt
+                .join(
+                    FilterTaxNumber,
+                    Person.tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        by_category_res = await session.execute(by_category_stmt)
+        stats["by_category"] = {
+            res[0]: res[1]
+            for res in by_category_res.all()
+        }
+
+        return stats
+
 
     async def get_person(self, session: AsyncSession, person_tax_number: str) -> dict[str, Any]:
         """

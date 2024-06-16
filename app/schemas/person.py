@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 from pydantic import BaseModel, field_validator
-from typing import List, Optional
+from typing import Dict, List, Optional
 from datetime import date
 
 
@@ -65,3 +65,8 @@ class PersonDB(PersonBase):
 class PersonsList(BaseModel):
     total: int
     items: List[PersonAdditionalFields]
+
+class PersonsStats(BaseModel):
+    total_persons: int
+    by_kind: Dict[int, int]
+    by_category: Dict[str, int]
