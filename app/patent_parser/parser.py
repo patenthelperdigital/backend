@@ -32,6 +32,7 @@ async def create_upload_file(file) -> FileResponse:
      """
     if file.content_type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
         raise HTTPException(status_code=400, detail="Данный формат файла не поддерживается.")
+
     try:
         content = await file.read()
         workbook = openpyxl.load_workbook(BytesIO(content))

@@ -42,9 +42,9 @@ class CRUDPatent(CRUDBase):
             )
             .outerjoin(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
             .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
-
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
             .group_by(Patent.kind, Patent.reg_number)
+            .order_by(Patent.actual.desc())
             .offset(skip)
             .limit(pagesize)
         )
