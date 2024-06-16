@@ -66,11 +66,9 @@ async def get_export_patent_file(
         )
         .join(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
         .join(Person, Person.tax_number == Ownership.person_tax_number)
+        .limit(10000)
 
     )
-
-    if filter_id is None:
-        stmt = stmt.limit(10000)
 
     if filter_id:
         stmt = stmt.join(FilterTaxNumber, Person.tax_number == FilterTaxNumber.tax_number)
