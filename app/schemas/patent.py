@@ -81,3 +81,4 @@ class PatentsStats(BaseModel):
     with_holders_percent: int
     ru_with_holders_percent: int
     by_author_count: Dict[str, int]
+    by_patent_kind: Dict[int, int]

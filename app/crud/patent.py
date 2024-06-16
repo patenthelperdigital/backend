@@ -140,37 +140,79 @@ class CRUDPatent(CRUDBase):
         """
         stats = {}
 
-        total = await session.execute(
+        total_patents_stmt = (
             select(func.count()).select_from(Patent)
         )
-        stats["total_patents"] = total.scalar()
+        if filter_id is not None:
+            total_patents_stmt = (
+                total_patents_stmt
+                .join(Ownership)
+                .join(
+                    FilterTaxNumber,
+                    Ownership.person_tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        total_patents_res = await session.execute(total_patents_stmt)
+        stats["total_patents"] = total_patents_res.scalar()
 
-        total_ru = await session.execute(
+        total_patents_ru_stmt = (
             select(func.count()).select_from(Patent).filter_by(country_code="RU")
         )
-        stats["total_ru_patents"] = total_ru.scalar()
+        if filter_id is not None:
+            total_patents_ru_stmt = (
+                total_patents_ru_stmt
+                .join(Ownership)
+                .join(
+                    FilterTaxNumber,
+                    Ownership.person_tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        total_patents_ru_res = await session.execute(total_patents_ru_stmt)
+        stats["total_ru_patents"] = total_patents_ru_res.scalar()
 
-        total_with_holders = await session.execute(
+        total_with_holders_stmt = (
             select(func.count(func.distinct(Patent.kind, Patent.reg_number)))
             .select_from(Patent)
             .join(Ownership)
         )
-        stats["total_with_holders"] = total_with_holders.scalar()
+        if filter_id is not None:
+            total_with_holders_stmt = (
+                total_with_holders_stmt
+                .join(
+                    FilterTaxNumber,
+                    Ownership.person_tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        total_with_holders_res = await session.execute(total_with_holders_stmt)
+        stats["total_with_holders"] = total_with_holders_res.scalar()
 
-        total_ru_with_holders = await session.execute(
+        total_ru_with_holders_stmt = (
             select(func.count(func.distinct(Patent.kind, Patent.reg_number)))
             .select_from(Patent)
             .filter_by(country_code="RU")
             .join(Ownership)
         )
-        stats["total_ru_with_holders"] = total_ru_with_holders.scalar()
+        if filter_id is not None:
+            total_ru_with_holders_stmt = (
+                total_ru_with_holders_stmt
+                .join(
+                    FilterTaxNumber,
+                    Ownership.person_tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        total_ru_with_holders_res = await session.execute(total_ru_with_holders_stmt)
+        stats["total_ru_with_holders"] = total_ru_with_holders_res.scalar()
 
         stats["with_holders_percent"] = int(round(
             100 * stats["total_with_holders"] / stats["total_patents"]))
         stats["ru_with_holders_percent"] = int(round(
             100 * stats["total_ru_with_holders"] / stats["total_ru_patents"]))
 
-        by_author_count = await session.execute(
+        by_author_count_stmt = (
             select(
                 case(
                     (Patent.author_count == 0, "0"),
@@ -183,11 +225,42 @@ class CRUDPatent(CRUDBase):
             .select_from(Patent)
             .group_by("author_count_group")
         )
+        if filter_id is not None:
+            by_author_count_stmt = (
+                by_author_count_stmt
+                .join(Ownership)
+                .join(
+                    FilterTaxNumber,
+                    Ownership.person_tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        by_author_count_res = await session.execute(by_author_count_stmt)
         stats["by_author_count"] = {
             row[0]: row[1]
-            for row in by_author_count.all()
+            for row in by_author_count_res.all()
         }
-        stats["by_author_count"]
+
+        by_patent_kind_stmt = (
+            select(Patent.kind, func.count())
+            .select_from(Patent)
+            .group_by(Patent.kind)
+        )
+        if filter_id is not None:
+            by_patent_kind_stmt = (
+                by_patent_kind_stmt
+                .join(Ownership)
+                .join(
+                    FilterTaxNumber,
+                    Ownership.person_tax_number == FilterTaxNumber.tax_number
+                )
+                .filter_by(filter_id=filter_id)
+            )
+        by_patent_kind_res = await session.execute(by_patent_kind_stmt)
+        stats["by_patent_kind"] = {
+            res[0]: res[1]
+            for res in by_patent_kind_res.all()
+        }
 
         return stats
 
