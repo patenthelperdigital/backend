@@ -20,6 +20,7 @@ class Patent(Base):
        category (str): Категория патента.
        subcategory (str): Подкатегория патента.
        kind (int): Тип патента. Не может быть пустым.
+       country_code (str): Страна правообладателя (двухбуквенный код, например RU).
        region (str): Регион, связанный с патентом.
        city (str): Город, связанный с патентом.
        author_count (int): Количество авторов патента.
@@ -39,6 +40,7 @@ class Patent(Base):
     category = Column(String)
     subcategory = Column(String)
     kind = Column(Integer, nullable=False)
+    country_code = Column(String(length=10))
     region = Column(String)
     city = Column(String)
     author_count = Column(Integer)

@@ -1,6 +1,6 @@
 from datetime import date
 from enum import IntEnum
-from typing import Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, field_validator
 
@@ -24,19 +24,20 @@ class PatentHolder(BaseModel):
 
 class PatentBase(BaseModel):
     reg_number: int
-    reg_date: Optional[date]
-    appl_date: Optional[date]
-    author_raw: Optional[str]
-    owner_raw: Optional[str]
-    address: Optional[str]
+    reg_date: Optional[date] = None
+    appl_date: Optional[date] = None
+    author_raw: Optional[str] = None
+    owner_raw: Optional[str] = None
+    address: Optional[str] = None
     name: str
     actual: bool
-    category: Optional[str]
-    subcategory: Optional[str]
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
     kind: int
     author_count: int
-    region: Optional[str]
-    city: Optional[str]
+    country_code: Optional[str] = None
+    region: Optional[str] = None
+    city: Optional[str] = None
 
     @field_validator('kind')
     @classmethod
@@ -65,3 +66,18 @@ class PatentAdditionalFields(PatentBase):
 class PatentDB(PatentBase):
     class Config:
         orm_mode = True
+
+
+class PatentsList(BaseModel):
+    total: int
+    items: Optional[List[PatentAdditionalFields]]
+
+
+class PatentsStats(BaseModel):
+    total_patents: int
+    total_ru_patents: int
+    total_with_holders: int
+    total_ru_with_holders: int
+    with_holders_percent: int
+    ru_with_holders_percent: int
+    by_author_count: Dict[str, int]

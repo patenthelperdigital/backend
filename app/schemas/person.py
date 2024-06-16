@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import List, Optional
 from datetime import date
 
 
@@ -43,9 +43,14 @@ class PersonUpdate(PersonBase):
     pass
 
 
+class PersonPatents(BaseModel):
+    kind: int
+    reg_number: int
+
+
 class PersonAdditionalFields(PersonBase):
     category: str
-    patent_ids: list[int] = []
+    patents: list[PersonPatents] = []
     patent_count: int = 0
 
     class Config:
@@ -55,3 +60,8 @@ class PersonAdditionalFields(PersonBase):
 class PersonDB(PersonBase):
     class Config:
         orm_mode = True
+
+
+class PersonsList(BaseModel):
+    total: int
+    items: List[PersonAdditionalFields]

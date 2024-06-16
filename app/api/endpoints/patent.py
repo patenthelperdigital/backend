@@ -1,29 +1,26 @@
-
 from http import HTTPStatus
+from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 from app.api.validators import check_patent_exists
 from app.core.db import get_async_session
 from app.crud.patent import patent_crud
 from app.models import Patent
 from app.patent_parser.parser import create_upload_file
-
-from app.schemas.patent import PatentAdditionalFields, PatentUpdate, PatentDB, PatentCreate
+from app.schemas.patent import PatentsList, PatentsStats, PatentAdditionalFields, PatentUpdate, PatentDB, PatentCreate
 
 router = APIRouter()
 
 
-@router.get('/patents', response_model=list[PatentAdditionalFields], status_code=HTTPStatus.OK)
+@router.get('/patents', response_model=PatentsList, status_code=HTTPStatus.OK)
 async def list_patents(
-    session: AsyncSession = Depends(get_async_session),
     page: int = 1,
     pagesize: int = 10,
-    filter_id: int = None
-) -> list[PatentAdditionalFields]:
-
+    filter_id: Optional[int] = None,
+    session: AsyncSession = Depends(get_async_session),
+) -> PatentsList:
     """
     Получить список патентов.
 
@@ -41,6 +38,26 @@ async def list_patents(
 
     patents = await patent_crud.get_patents_list(session, page, pagesize)
     return patents
+
+
+@router.get('/patents/stats', response_model=PatentsStats, status_code=HTTPStatus.OK)
+async def get_patents_stats(
+    filter_id: Optional[int] = None,
+    session: AsyncSession = Depends(get_async_session)
+) -> PatentsStats:
+    """
+    Получить статистику по патентам.
+
+    Args:
+        filter_id (Optional[int]): опциональный идентификатор загруженного фильтра по списку ИНН.
+        session (AsyncSession): асинхронная сессия базы данных.
+
+    Returns:
+        PatentsStats: словарь со статистикой.
+    """
+    stats = await patent_crud.get_stats(session, filter_id)
+
+    return stats
 
 
 @router.post('/patent', response_model=PatentDB, status_code=HTTPStatus.CREATED)
