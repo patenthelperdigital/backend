@@ -2,7 +2,7 @@ from datetime import date
 from enum import IntEnum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 
 class KindEnum(IntEnum):
@@ -30,7 +30,7 @@ class PatentBase(BaseModel):
     owner_raw: Optional[str] = None
     address: Optional[str] = None
     name: str
-    actual: bool
+    actual: bool | str
     category: Optional[str] = None
     subcategory: Optional[str] = None
     kind: int
@@ -39,12 +39,12 @@ class PatentBase(BaseModel):
     region: Optional[str] = None
     city: Optional[str] = None
 
-    @field_validator('kind')
-    @classmethod
-    def check_kind_value(cls, value: int):
-        if value not in KindEnum.__members__.values():
-            raise ValueError('Можно использовать только цифры от 1 до 3')
-        return value
+    # @field_validator('kind')
+    # @classmethod
+    # def check_kind_value(cls, value: int):
+    #     if value not in KindEnum.__members__.values():
+    #         raise ValueError('Можно использовать только цифры от 1 до 3')
+    #     return value
 
 
 class PatentCreate(PatentBase):

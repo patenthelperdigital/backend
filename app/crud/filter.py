@@ -20,8 +20,6 @@ class CRUDFilters:
                 tax_numbers = df['person_tax_number'].astype(str).apply(
                     lambda x: '0' + x if len(x) == 9 else '0' + x if len(x) == 11 else x
                 ).tolist()
-                # tax_numbers = df['person_tax_number'].astype(str).apply(
-                #     lambda x: x.zfill(10) if len(x) < 10 else x.zfill(12) if len(x) < 12 else x).tolist()
 
                 new_filter = Filter(
                     name=filter_data.name,
@@ -63,7 +61,7 @@ class CRUDFilters:
             await session.refresh(db_filter)
         return db_filter
 
-    async def delete_filter(self, session: AsyncSession, filter_id: int) -> Filter:
+    async def delete_filter(self, session: AsyncSession, filter_id: int):
         db_filter = await self.get_filter(session, filter_id)
         if db_filter:
             await session.delete(db_filter)

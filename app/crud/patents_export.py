@@ -2,6 +2,7 @@ from io import BytesIO
 from typing import Optional
 
 import pandas as pd
+from fastapi import HTTPException
 
 from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,29 +16,29 @@ from app.models.filter import FilterTaxNumber
 async def get_export_patent_file(
         session: AsyncSession,
         filter_id: Optional[int] = None,
-        actual: Optional[bool | int] = None,
+        actual: Optional[str] = None,
         kind: Optional[int] = None,
 
 ):
     """
-      Получает данные о патентах и экспортирует их в файл XLSX.
+    Получает данные о патентах и экспортирует их в файл XLSX.
 
-      Args:
-          session (AsyncSession): Сессия для взаимодействия с базой данных.
+    Args:
+        session (AsyncSession): Сессия для взаимодействия с базой данных.
 
-          filter_id (Optional[int], optional): Идентификатор фильтра. Если указан, будут экспортированы только
-              патенты, связанные с этим фильтром. Если не указан, будут экспортированы первые 10000 патентов.
+        filter_id (Optional[int], optional): Идентификатор фильтра. Если указан, будут экспортированы только
+            патенты, связанные с этим фильтром. Если не указан, будут экспортированы первые 10000 патентов.
 
-          actual (Optional[bool | int], optional): Фильтр по актуальности патента. Если True (1), будут экспортированы
-              только актуальные патенты. Если False (0), будут экспортированы только неактуальные патенты.
-              Если не указан, актуальность не будет учитываться.
+        actual (Optional[str], optional): Фильтр по актуальности патента. Если "Актуально", будут экспортированы
+            только актуальные патенты. Если "Неактуально", будут экспортированы только неактуальные патенты.
+            Если не указан, актуальность не будет учитываться.
 
-          kind (Optional[int], optional): Фильтр по виду патента. Если указан, будут экспортированы только патенты
-              указанного вида (1 - изобретение, 2 - полезная модель, 3 - промышленный образец).
+        kind (Optional[int], optional): Фильтр по виду патента. Если указан, будут экспортированы только патенты
+            указанного вида (1 - изобретение, 2 - полезная модель, 3 - промышленный образец).
 
-      Returns:
-          StreamingResponse: Поток данных с XLSX-файлом, содержащим информацию о патентах.
-      """
+    Returns:
+        StreamingResponse: Поток данных с XLSX-файлом, содержащим информацию о патентах.
+        """
     stmt = (
         select(
             Patent.reg_number,
@@ -77,7 +78,16 @@ async def get_export_patent_file(
         stmt = stmt.where(FilterTaxNumber.filter_id == filter_id)
 
     if actual:
-        stmt = stmt.where(Patent.actual == actual)
+        actual_casefold = actual.casefold()
+        if actual_casefold == 'актуально':
+            stmt = stmt.where(Patent.actual == True)
+        elif actual_casefold == "неактуально":
+            stmt = stmt.where(Patent.actual == False)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Некорректное значение для параметра 'actual'. Ожидается 'актуально' или 'неактуально'."
+            )
 
     if kind:
         stmt = stmt.where(Patent.kind == kind)

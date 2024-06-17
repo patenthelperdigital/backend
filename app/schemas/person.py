@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 from typing import Dict, List, Optional
 from datetime import date
 
@@ -27,12 +27,12 @@ class PersonBase(BaseModel):
     reg_date: Optional[date]
     active: bool
 
-    @field_validator('kind')
-    @classmethod
-    def check_kind_value(cls, value: int):
-        if value not in PersonKindEnum.__members__.values():
-            raise ValueError('Можно использовать только цифры от 1 до 3')
-        return value
+    # @field_validator('kind')
+    # @classmethod
+    # def check_kind_value(cls, value: int):
+    #     if value not in PersonKindEnum.__members__.values():
+    #         raise ValueError('Можно использовать только цифры от 1 до 3')
+    #     return value
 
 
 class PersonCreate(PersonBase):

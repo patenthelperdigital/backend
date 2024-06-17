@@ -1,14 +1,16 @@
 from http import HTTPStatus
 from typing import Optional
 
-from fastapi import APIRouter, Depends, UploadFile, HTTPException, Query
+from fastapi import APIRouter, Depends, UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import StreamingResponse
+from starlette import status
 
 from app.api.validators import check_patent_exists
 from app.core.db import get_async_session
 from app.crud.patent import patent_crud
 from app.crud.patents_export import get_export_patent_file
+
 from app.models import Patent
 from app.patent_parser.parser import create_upload_file
 from app.schemas.patent import PatentsList, PatentsStats, PatentAdditionalFields, PatentUpdate, PatentDB, PatentCreate
@@ -16,7 +18,7 @@ from app.schemas.patent import PatentsList, PatentsStats, PatentAdditionalFields
 router = APIRouter()
 
 
-@router.get('/patents', response_model=PatentsList, status_code=HTTPStatus.OK)
+@router.get('/patents', response_model=PatentsList, status_code=status.HTTP_200_OK)
 async def list_patents(
     page: int = 1,
     pagesize: int = 10,
@@ -24,8 +26,7 @@ async def list_patents(
     kind: Optional[int] = None,
     actual: Optional[bool] = None,
     session: AsyncSession = Depends(get_async_session),
-) -> PatentsList:
-
+):
     """
     Получить список патентов.
 
@@ -37,38 +38,48 @@ async def list_patents(
     Returns:
         List[PatentAdditionalFields]: список патентов с дополнительными полями.
     """
-    if filter_id:
-        patents_with_filter = await patent_crud.get_patents_list_with_filter(session, page, pagesize, filter_id)
-        return patents_with_filter
+    try:
+        if filter_id:
+            patents_with_filter = await patent_crud.get_patents_list_with_filter(session, page, pagesize, filter_id)
+            return patents_with_filter
 
-    patents = await patent_crud.get_patents_list(session, page, pagesize, kind, actual)
-    return patents
+        patents = await patent_crud.get_patents_list(session, page, pagesize, kind, actual)
+
+        return patents
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get('/patents/stats', response_model=PatentsStats, status_code=HTTPStatus.OK)
+@router.get('/patents/stats', response_model=PatentsStats, status_code=status.HTTP_200_OK)
 async def get_patents_stats(
-        filter_id: Optional[int] = None,
-        session: AsyncSession = Depends(get_async_session)
+    filter_id: Optional[int] = None,
+    session: AsyncSession = Depends(get_async_session)
 ) -> PatentsStats:
     """
     Получить статистику по патентам.
 
     Args:
         filter_id (Optional[int]): опциональный идентификатор загруженного фильтра по списку ИНН.
+        Id фильтров начинаются с 4 и выше
+
         session (AsyncSession): асинхронная сессия базы данных.
 
     Returns:
         PatentsStats: словарь со статистикой.
     """
-    stats = await patent_crud.get_stats(session, filter_id)
+    try:
+        stats = await patent_crud.get_stats(session, filter_id)
+        return stats
 
-    return stats
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post('/patents', response_model=PatentDB, status_code=HTTPStatus.CREATED)
+@router.post('/patents', response_model=PatentDB, status_code=status.HTTP_201_CREATED)
 async def create_patent(
-        patent: PatentCreate,
-        session: AsyncSession = Depends(get_async_session)
+    patent: PatentCreate,
+    session: AsyncSession = Depends(get_async_session)
 ) -> PatentDB:
     """
     Создать новый патент.
@@ -80,16 +91,20 @@ async def create_patent(
     Returns:
         PatentDB: созданный патент.
     """
-    new_patent = await patent_crud.create_object(patent, session)
-    return new_patent
+    try:
+        new_patent = await patent_crud.create_object(patent, session)
+        return new_patent
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-
-@router.get('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentAdditionalFields, status_code=HTTPStatus.OK)
+@router.get('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentAdditionalFields,
+            status_code=status.HTTP_200_OK)
 async def get_patent(
-        patent_kind: int,
-        patent_reg_number: int,
-        session: AsyncSession = Depends(get_async_session)
+    patent_kind: int,
+    patent_reg_number: int,
+    session: AsyncSession = Depends(get_async_session)
 ) -> PatentAdditionalFields:
     """
     Получить патент по идентификатору.
@@ -102,16 +117,20 @@ async def get_patent(
     Returns:
         PatentAdditionalFields: патент с дополнительными полями.
     """
-    patent = await patent_crud.get_patent(session, patent_kind, patent_reg_number)
-    return patent
+    try:
+        patent = await patent_crud.get_patent(session, patent_kind, patent_reg_number)
+        return patent
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.patch('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentDB, status_code=HTTPStatus.OK)
+@router.patch('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentDB, status_code=status.HTTP_200_OK)
 async def update_patent(
-        patent_kind: int,
-        patent_reg_number: int,
-        obj_in: PatentUpdate,
-        session: AsyncSession = Depends(get_async_session)
+    patent_kind: int,
+    patent_reg_number: int,
+    obj_in: PatentUpdate,
+    session: AsyncSession = Depends(get_async_session)
 ) -> PatentDB:
     """
     Обновить существующий патент.
@@ -125,16 +144,20 @@ async def update_patent(
     Returns:
        PatentDB: обновленный патент.
     """
-    patent = await check_patent_exists(Patent, patent_kind, patent_reg_number, session)
-    updated_patent = await patent_crud.update_object(patent, obj_in, session)
-    return updated_patent
+    try:
+        patent = await check_patent_exists(Patent, patent_kind, patent_reg_number, session)
+        updated_patent = await patent_crud.update_object(patent, obj_in, session)
+        return updated_patent
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.delete('/patents/{patent_kind}/{patent_reg_number}', status_code=HTTPStatus.NO_CONTENT)
+@router.delete('/patents/{patent_kind}/{patent_reg_number}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_patent(
-        patent_kind: int,
-        patent_reg_number: int,
-        session: AsyncSession = Depends(get_async_session)
+    patent_kind: int,
+    patent_reg_number: int,
+    session: AsyncSession = Depends(get_async_session)
 ) -> None:
     """
     Удалить патент по виду и регистрационному номеру.
@@ -144,8 +167,12 @@ async def delete_patent(
         patent_reg_number (int): регистрационный номер патента.
         session (AsyncSession): асинхронная сессия базы данных.
     """
-    patent = await check_patent_exists(Patent, patent_kind, patent_reg_number, session)
-    await patent_crud.delete_object(patent, session)
+    try:
+        patent = await check_patent_exists(Patent, patent_kind, patent_reg_number, session)
+        await patent_crud.delete_object(patent, session)
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post("/uploadfile/", status_code=HTTPStatus.OK)
@@ -166,29 +193,34 @@ async def send_patent_file(file: UploadFile):
 @router.get("/patents/export", response_class=StreamingResponse)
 async def export_patents(
         filter_id: Optional[int] = None,
-        actual: Optional[bool] = None,
+        actual: Optional[str] = None,
         kind: Optional[int] = None,
         session: AsyncSession = Depends(get_async_session)
 ):
     """
-       Экспортирует данные о патентах в формате XLSX.
+   Экспортирует данные о патентах в формате XLSX.
 
-       Параметры:
-       - filter_id (Optional[int]): Идентификатор фильтра. Если указан, будут экспортированы только патенты,
-         связанные с этим фильтром. Если не указан, будут экспортированы первые 10000 патентов.
-       - actual (Optional[bool]): Фильтр по актуальности патента. Если True, будут экспортированы только
-         актуальные патенты. Если False, будут экспортированы только неактуальные патенты. Если не указан,
-         актуальность не будет учитываться.
-       - kind (Optional[int]): Фильтр по виду патента. Если указан, будут экспортированы только патенты
-         указанного вида (1 - изобретение, 2 - полезная модель, 3 - промышленный образец).
-       - session (AsyncSession): Сессия для взаимодействия с базой данных.
+   Параметры:
+   - filter_id (Optional[int]): Идентификатор фильтра. Если указан, будут экспортированы только патенты,
+     связанные с этим фильтром. Если не указан, будут экспортированы первые 10000 патентов.
 
-       Возвращает:
-       - StreamingResponse: Поток данных с XLSX-файлом, содержащим информацию о патентах.
+     Id фильтров начинаются с 4 и выше
 
-       Исключения:
-       - HTTPException(500): Если произошла ошибка при обработке запроса.
-    """
+   - actual (Optional[str]): Фильтр по актуальности патента. Если "Актуально", будут экспортированы только
+     актуальные патенты. Если "Неактуально", будут экспортированы только неактуальные патенты. Если не указан,
+     актуальность не будет учитываться.
+
+   - kind (Optional[int]): Фильтр по виду патента. Если указан, будут экспортированы только патенты
+     указанного вида (1 - изобретение, 2 - полезная модель, 3 - промышленный образец).
+
+   - session (AsyncSession): Сессия для взаимодействия с базой данных.
+
+   Возвращает:
+   - StreamingResponse: Поток данных с XLSX-файлом, содержащим информацию о патентах.
+
+   Исключения:
+   - HTTPException(500): Если произошла ошибка при обработке запроса.
+"""
     try:
         return await get_export_patent_file(session, filter_id, actual, kind)
 
