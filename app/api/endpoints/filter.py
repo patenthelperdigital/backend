@@ -3,6 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from typing import List
 
+from starlette import status
+
 from app.core.db import get_async_session
 from app.crud.filter import filter_crud
 from app.schemas.filter import FilterDB, FilterCreate
@@ -10,7 +12,7 @@ from app.schemas.filter import FilterDB, FilterCreate
 router = APIRouter()
 
 
-@router.post("/filters", response_model=FilterDB)
+@router.post("/filters", response_model=FilterDB, status_code=status.HTTP_201_CREATED)
 async def create_filter(name: str, file: UploadFile, session: AsyncSession = Depends(get_async_session)):
     """
     Создает новый фильтр на основе загруженного Excel-файла.
@@ -33,11 +35,12 @@ async def create_filter(name: str, file: UploadFile, session: AsyncSession = Dep
         filter_in = FilterCreate(name=name, filename=file.filename)
         file_bytes = await file.read()
         return await filter_crud.create_filter(session, filter_in, file_bytes)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/filters", response_model=List[FilterDB])
+@router.get("/filters", response_model=List[FilterDB], status_code=status.HTTP_200_OK)
 async def read_filters(session: AsyncSession = Depends(get_async_session)):
     """
     Получает список всех фильтров.
@@ -48,10 +51,13 @@ async def read_filters(session: AsyncSession = Depends(get_async_session)):
     Returns:
         List[FilterDB]: Список всех фильтров.
     """
-    return await filter_crud.get_filters(session)
+    try:
+        return await filter_crud.get_filters(session)
 
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.get("/filters/{filter_id}", response_model=FilterDB)
+@router.get("/filters/{filter_id}", response_model=FilterDB, status_code=status.HTTP_200_OK)
 async def read_filter(filter_id: int, session: AsyncSession = Depends(get_async_session)):
     """
     Получает фильтр по его идентификатору.
@@ -68,11 +74,11 @@ async def read_filter(filter_id: int, session: AsyncSession = Depends(get_async_
     """
     db_filter = await filter_crud.get_filter(session, filter_id)
     if not db_filter:
-        raise HTTPException(status_code=404, detail=f"Фильтр {filter_id} не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Фильтр {filter_id} не найден")
     return db_filter
 
 
-@router.put("/filters/{filter_id}", response_model=FilterDB)
+@router.put("/filters/{filter_id}", response_model=FilterDB, status_code=status.HTTP_200_OK)
 async def update_filter(filter_id: int, name: str, session: AsyncSession = Depends(get_async_session)):
     """
     Обновляет имя существующего фильтра.
@@ -85,8 +91,11 @@ async def update_filter(filter_id: int, name: str, session: AsyncSession = Depen
     Returns:
         FilterDB: Обновленный фильтр.
     """
-    return await filter_crud.update_filter_name(session, filter_id, name)
+    try:
+        return await filter_crud.update_filter_name(session, filter_id, name)
 
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.delete("/filters/{filter_id}", response_model=FilterDB)
 async def delete_filter(filter_id: int, session: AsyncSession = Depends(get_async_session)):
@@ -100,4 +109,8 @@ async def delete_filter(filter_id: int, session: AsyncSession = Depends(get_asyn
     Returns:
         FilterDB: Удаленный фильтр.
     """
-    return await filter_crud.delete_filter(session, filter_id)
+    try:
+        await filter_crud.delete_filter(session, filter_id)
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

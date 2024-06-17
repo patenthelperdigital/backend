@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
 
 from app.api.validators import check_person_exists
 from app.core.db import get_async_session
@@ -33,28 +34,36 @@ async def list_persons(
     Returns:
         List[PersonAdditionalFields]: список персон с дополнительными полями.
     """
-    persons = await person_crud.get_persons_list(session, page, pagesize, kind, active, category)
-    return persons
+    try:
+        persons = await person_crud.get_persons_list(session, page, pagesize, kind, active, category)
+        return persons
 
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/persons/stats", response_model=PersonsStats, status_code=HTTPStatus.OK)
 async def get_persons_stats(
-    filter_id: Optional[int] = None,
-    session: AsyncSession = Depends(get_async_session)
+        filter_id: Optional[int] = None,
+        session: AsyncSession = Depends(get_async_session)
 ) -> PersonsStats:
     """
     Получить статистику по персонам.
 
     Args:
         filter_id (Optional[int]): опциональный идентификатор загруженного фильтра по списку ИНН.
+        Id фильтров начинаются с 4 и выше
+
         session (AsyncSession): асинхронная сессия базы данных.
 
     Returns:
         PersonsStats: словарь со статистикой.
     """
-    stats = await person_crud.get_stats(session, filter_id)
+    try:
+        stats = await person_crud.get_stats(session, filter_id)
+        return stats
 
-    return stats
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post("/persons", response_model=PersonDB, status_code=HTTPStatus.CREATED)
@@ -72,8 +81,12 @@ async def create_person(
     Returns:
         PersonDB: созданная персона.
     """
-    new_person = await person_crud.create_object(person, session)
-    return new_person
+    try:
+        new_person = await person_crud.create_object(person, session)
+        return new_person
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.get("/persons/{person_tax_number}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
@@ -91,8 +104,12 @@ async def get_person(
     Returns:
         PersonAdditionalFields: персона с дополнительными полями.
     """
-    person = await person_crud.get_person(session, person_tax_number)
-    return person
+    try:
+        person = await person_crud.get_person(session, person_tax_number)
+        return person
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.patch('/persons/{person_tax_number}', response_model=PersonDB, status_code=HTTPStatus.OK)
@@ -112,9 +129,13 @@ async def update_person(
     Returns:
         PersonDB: обновленная персона.
     """
-    person = await check_person_exists(Person, person_tax_number, session)
-    updated_person = await person_crud.update_object(person, obj_in, session)
-    return updated_person
+    try:
+        person = await check_person_exists(Person, person_tax_number, session)
+        updated_person = await person_crud.update_object(person, obj_in, session)
+        return updated_person
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.delete('/persons/{person_tax_number}', status_code=HTTPStatus.NO_CONTENT)
@@ -129,5 +150,9 @@ async def delete_person(
         person_tax_number(int): идентификационный номер персоны.
         session (AsyncSession): асинхронная сессия базы данных.
     """
-    person = await check_person_exists(Person, person_tax_number, session)
-    await person_crud.delete_object(person, session)
+    try:
+        person = await check_person_exists(Person, person_tax_number, session)
+        await person_crud.delete_object(person, session)
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
