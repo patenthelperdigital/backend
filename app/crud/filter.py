@@ -17,7 +17,7 @@ class CRUDFilters:
         try:
             async with session.begin():
                 df = pd.read_excel(file, engine='openpyxl')
-                tax_numbers = df['person_tax_number'].astype(str).apply(
+                tax_numbers = df.iloc[:, 0].astype(str).apply(
                     lambda x: '0' + x if len(x) == 9 else '0' + x if len(x) == 11 else x
                 ).tolist()
 
