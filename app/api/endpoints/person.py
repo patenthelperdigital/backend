@@ -1,20 +1,42 @@
-from http import HTTPStatus
-from typing import Optional
-
+from aiocache import cached, Cache
 from fastapi import APIRouter, Depends, HTTPException
+from http import HTTPStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
+from typing import Optional
+
+import logging
 
 from app.api.validators import check_person_exists
 from app.core.db import get_async_session
 from app.crud.person import person_crud
 from app.models import Person
-from app.schemas.person import PersonsList, PersonsStats, PersonDB, PersonCreate, PersonAdditionalFields, PersonUpdate
+from app.schemas.person import (
+    PersonsList,
+    PersonsStats,
+    PersonAdditionalFields,
+    PersonCreate,
+    PersonDB,
+    PersonUpdate,
+)
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 router = APIRouter()
 
 
-@router.get("/persons", response_model=PersonsList, status_code=HTTPStatus.OK)
+@router.get(
+    "/persons",
+    response_model=PersonsList,
+    status_code=HTTPStatus.OK
+)
+@cached(
+    ttl=3600,
+    cache=Cache.MEMORY,
+    key_builder=lambda *args, **kwargs: (
+            f"persons:{kwargs.get('page')}:{kwargs.get('pagesize')}:"
+            f"{kwargs.get('kind')}:{kwargs.get('active')}:{kwargs.get('category')}")
+)
 async def list_persons(
         session: AsyncSession = Depends(get_async_session),
         page: int = 1,
@@ -23,6 +45,7 @@ async def list_persons(
         active: Optional[bool] = None,
         category: Optional[int] = None
 ) -> PersonsList:
+
     """
     Получить список персон.
 
@@ -34,6 +57,8 @@ async def list_persons(
     Returns:
         List[PersonAdditionalFields]: список персон с дополнительными полями.
     """
+    logger.debug(
+        f"Fetching persons with page={page}, pagesize={pagesize}, kind={kind}, active={active}, category={category}")
     try:
         persons = await person_crud.get_persons_list(session, page, pagesize, kind, active, category)
         return persons
@@ -41,7 +66,18 @@ async def list_persons(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.get("/persons/stats", response_model=PersonsStats, status_code=HTTPStatus.OK)
+
+@router.get(
+    "/persons/stats",
+    response_model=PersonsStats,
+    status_code=HTTPStatus.OK
+)
+@cached(
+    ttl=3600,
+    cache=Cache.MEMORY,
+    key_builder=lambda *args, **kwargs: (
+            f"persons_stats:{kwargs.get('filter_id')}:")
+)
 async def get_persons_stats(
         filter_id: Optional[int] = None,
         session: AsyncSession = Depends(get_async_session)
@@ -58,6 +94,8 @@ async def get_persons_stats(
     Returns:
         PersonsStats: словарь со статистикой.
     """
+    logger.debug(
+        f"Fetching persons_stats with filter_id={filter_id}")
     try:
         stats = await person_crud.get_stats(session, filter_id)
         return stats
@@ -66,7 +104,11 @@ async def get_persons_stats(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post("/persons", response_model=PersonDB, status_code=HTTPStatus.CREATED)
+@router.post(
+    "/persons",
+    response_model=PersonDB,
+    status_code=HTTPStatus.CREATED
+)
 async def create_person(
         person: PersonCreate,
         session: AsyncSession = Depends(get_async_session)
@@ -89,7 +131,11 @@ async def create_person(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get("/persons/{person_tax_number}", response_model=PersonAdditionalFields, status_code=HTTPStatus.OK)
+@router.get(
+    "/persons/{person_tax_number}",
+    response_model=PersonAdditionalFields,
+    status_code=HTTPStatus.OK
+)
 async def get_person(
         person_tax_number: str,
         session: AsyncSession = Depends(get_async_session)
@@ -112,7 +158,11 @@ async def get_person(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.patch('/persons/{person_tax_number}', response_model=PersonDB, status_code=HTTPStatus.OK)
+@router.patch(
+    '/persons/{person_tax_number}',
+    response_model=PersonDB,
+    status_code=HTTPStatus.OK
+)
 async def update_person(
         person_tax_number: str,
         obj_in: PersonUpdate,

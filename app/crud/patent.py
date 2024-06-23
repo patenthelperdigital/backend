@@ -1,8 +1,11 @@
+import time
 from typing import Dict, Sequence, Any, Optional
 
+from aiocache import cached
 from sqlalchemy import case, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 
 from app.crud.crud_base import CRUDBase
 from app.models import Ownership, Person
@@ -34,10 +37,12 @@ class CRUDPatent(CRUDBase):
         Returns:
             Dict[str, int | list[dict[str, list | int | Any]]]: Список патентов с дополнительной информацией.
         """
+        print(f"Executing get_patents_list at {time.time()}")
         skip = (page - 1) * pagesize
         stmt = (
             select(Patent)
-            .outerjoin(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
+            .outerjoin(Ownership,
+                       (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
             .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
             .group_by(Patent.kind, Patent.reg_number)
@@ -94,9 +99,11 @@ class CRUDPatent(CRUDBase):
             select(
                 Patent,
                 func.string_agg(Person.short_name, ', ').label("owner_raw"),
-                func.coalesce(func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count'), 0)
+                func.coalesce(func.array_length(func.string_to_array(Patent.author_raw, ', '), 1).label('author_count'),
+                              0)
             )
-            .outerjoin(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
+            .outerjoin(Ownership,
+                       (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
             .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))
             .group_by(Patent.kind, Patent.reg_number)
@@ -121,7 +128,7 @@ class CRUDPatent(CRUDBase):
         }
 
     async def get_stats(
-        self, session: AsyncSession, filter_id: Optional[int] = None
+            self, session: AsyncSession, filter_id: Optional[int] = None
     ) -> dict:
         """
         Статистика по патентам.
@@ -259,7 +266,8 @@ class CRUDPatent(CRUDBase):
 
         return stats
 
-    async def get_patents_list_with_filter(self, session: AsyncSession, page: int, pagesize: int, filter_id: int) -> list[dict[str, int | list[dict[str, Any]] | Any]]:
+    async def get_patents_list_with_filter(self, session: AsyncSession, page: int, pagesize: int, filter_id: int) -> \
+            list[dict[str, int | list[dict[str, Any]] | Any]]:
         skip = (page - 1) * pagesize
         tax_numbers_stmt = select(FilterTaxNumber.tax_number).where(FilterTaxNumber.filter_id == filter_id)
         tax_numbers_result = await session.execute(tax_numbers_stmt)
@@ -268,7 +276,7 @@ class CRUDPatent(CRUDBase):
         stmt = (
             select(Patent)
             .outerjoin(Ownership,
-                  (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
+                       (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
             .outerjoin(Person, Person.tax_number == Ownership.person_tax_number)
             .where(Person.tax_number.in_(tax_numbers))
             .options(selectinload(Patent.ownerships).selectinload(Ownership.person))

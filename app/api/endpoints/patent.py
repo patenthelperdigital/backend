@@ -1,31 +1,54 @@
+import logging
 from http import HTTPStatus
 from typing import Optional
 
-from fastapi import APIRouter, Depends, UploadFile, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiocache import cached, Cache
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from app.api.validators import check_patent_exists
 from app.core.db import get_async_session
 from app.crud.patent import patent_crud
 from app.crud.patents_export import get_export_patent_file
-
 from app.models import Patent
 from app.patent_parser.parser import create_upload_file
-from app.schemas.patent import PatentsList, PatentsStats, PatentAdditionalFields, PatentUpdate, PatentDB, PatentCreate
+from app.schemas.patent import (
+    PatentAdditionalFields,
+    PatentCreate,
+    PatentDB,
+    PatentUpdate,
+    PatentsList,
+    PatentsStats,
+)
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 router = APIRouter()
 
 
-@router.get('/patents', response_model=PatentsList, status_code=status.HTTP_200_OK)
+@router.get(
+    '/patents',
+    response_model=PatentsList,
+    status_code=status.HTTP_200_OK
+)
+@cached(
+    ttl=3600,
+    cache=Cache.MEMORY,
+    key_builder=lambda *args, **kwargs: (
+            f"patents:{kwargs.get('page')}:{kwargs.get('pagesize')}:"
+            f"{kwargs.get('filter_id')}:{kwargs.get('kind')}:{kwargs.get('actual')}"
+    )
+)
 async def list_patents(
-    page: int = 1,
-    pagesize: int = 10,
-    filter_id: Optional[int] = None,
-    kind: Optional[int] = None,
-    actual: Optional[bool] = None,
-    session: AsyncSession = Depends(get_async_session),
+        page: int = 1,
+        pagesize: int = 10,
+        filter_id: Optional[int] = None,
+        kind: Optional[int] = None,
+        actual: Optional[bool] = None,
+        session: AsyncSession = Depends(get_async_session),
 ):
     """
     Получить список патентов.
@@ -38,6 +61,8 @@ async def list_patents(
     Returns:
         List[PatentAdditionalFields]: список патентов с дополнительными полями.
     """
+    logger.debug(
+        f"Fetching patents with page={page}, pagesize={pagesize}, filter_id={filter_id}, kind={kind}, actual={actual}")
     try:
         if filter_id:
             patents_with_filter = await patent_crud.get_patents_list_with_filter(session, page, pagesize, filter_id)
@@ -51,10 +76,19 @@ async def list_patents(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get('/patents/stats', response_model=PatentsStats, status_code=status.HTTP_200_OK)
+@router.get(
+    '/patents/stats',
+    response_model=PatentsStats,
+    status_code=status.HTTP_200_OK
+)
+@cached(
+    ttl=3600,
+    cache=Cache.MEMORY,
+    key_builder=lambda *args, **kwargs: f"patents_stats:{kwargs.get('filter_id')}"
+)
 async def get_patents_stats(
-    filter_id: Optional[int] = None,
-    session: AsyncSession = Depends(get_async_session)
+        filter_id: Optional[int] = None,
+        session: AsyncSession = Depends(get_async_session)
 ) -> PatentsStats:
     """
     Получить статистику по патентам.
@@ -68,6 +102,8 @@ async def get_patents_stats(
     Returns:
         PatentsStats: словарь со статистикой.
     """
+    logger.debug(
+        f"Fetching patents_stats with filter_id={filter_id}")
     try:
         stats = await patent_crud.get_stats(session, filter_id)
         return stats
@@ -76,10 +112,14 @@ async def get_patents_stats(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post('/patents', response_model=PatentDB, status_code=status.HTTP_201_CREATED)
+@router.post(
+    '/patents',
+    response_model=PatentDB,
+    status_code=status.HTTP_201_CREATED
+)
 async def create_patent(
-    patent: PatentCreate,
-    session: AsyncSession = Depends(get_async_session)
+        patent: PatentCreate,
+        session: AsyncSession = Depends(get_async_session)
 ) -> PatentDB:
     """
     Создать новый патент.
@@ -99,12 +139,15 @@ async def create_patent(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-
-@router.get('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentAdditionalFields, status_code=status.HTTP_200_OK)
+@router.get(
+    '/patents/{patent_kind}/{patent_reg_number}',
+    response_model=PatentAdditionalFields,
+    status_code=status.HTTP_200_OK
+)
 async def get_patent(
-    patent_kind: int,
-    patent_reg_number: int,
-    session: AsyncSession = Depends(get_async_session)
+        patent_kind: int,
+        patent_reg_number: int,
+        session: AsyncSession = Depends(get_async_session)
 ) -> PatentAdditionalFields:
     """
     Получить патент по идентификатору.
@@ -125,12 +168,16 @@ async def get_patent(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.patch('/patents/{patent_kind}/{patent_reg_number}', response_model=PatentDB, status_code=status.HTTP_200_OK)
+@router.patch(
+    '/patents/{patent_kind}/{patent_reg_number}',
+    response_model=PatentDB,
+    status_code=status.HTTP_200_OK
+)
 async def update_patent(
-    patent_kind: int,
-    patent_reg_number: int,
-    obj_in: PatentUpdate,
-    session: AsyncSession = Depends(get_async_session)
+        patent_kind: int,
+        patent_reg_number: int,
+        obj_in: PatentUpdate,
+        session: AsyncSession = Depends(get_async_session)
 ) -> PatentDB:
     """
     Обновить существующий патент.
@@ -153,11 +200,14 @@ async def update_patent(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.delete('/patents/{patent_kind}/{patent_reg_number}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    '/patents/{patent_kind}/{patent_reg_number}',
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_patent(
-    patent_kind: int,
-    patent_reg_number: int,
-    session: AsyncSession = Depends(get_async_session)
+        patent_kind: int,
+        patent_reg_number: int,
+        session: AsyncSession = Depends(get_async_session)
 ) -> None:
     """
     Удалить патент по виду и регистрационному номеру.

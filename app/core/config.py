@@ -7,7 +7,7 @@ load_dotenv()
 class Settings(BaseSettings):
     app_title: str = 'Сервис анализа патентной активности компаний.'
     database_url: str
-    database_cli_url: str
+
 
     class Config:
         env_file = '.env'
