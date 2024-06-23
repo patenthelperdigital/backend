@@ -8,6 +8,7 @@ from typing import Optional
 import logging
 
 from app.api.validators import check_person_exists
+from app.core.config import settings
 from app.core.db import get_async_session
 from app.crud.person import person_crud
 from app.models import Person
@@ -31,7 +32,7 @@ router = APIRouter()
     status_code=HTTPStatus.OK
 )
 @cached(
-    ttl=3600,
+    ttl=settings.cache_ttl,
     cache=Cache.MEMORY,
     key_builder=lambda *args, **kwargs: (
             f"persons:{kwargs.get('page')}:{kwargs.get('pagesize')}:"
@@ -73,7 +74,7 @@ async def list_persons(
     status_code=HTTPStatus.OK
 )
 @cached(
-    ttl=3600,
+    ttl=settings.cache_ttl,
     cache=Cache.MEMORY,
     key_builder=lambda *args, **kwargs: (
             f"persons_stats:{kwargs.get('filter_id')}:")
