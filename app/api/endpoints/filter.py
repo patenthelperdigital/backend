@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from starlette import status
+from fastapi.responses import Response
 
 from app.core.db import get_async_session
 from app.crud.filter import filter_crud
@@ -57,6 +58,7 @@ async def read_filters(session: AsyncSession = Depends(get_async_session)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
 @router.get("/filters/{filter_id}", response_model=FilterDB, status_code=status.HTTP_200_OK)
 async def read_filter(filter_id: int, session: AsyncSession = Depends(get_async_session)):
     """
@@ -97,7 +99,8 @@ async def update_filter(filter_id: int, name: str, session: AsyncSession = Depen
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.delete("/filters/{filter_id}", response_model=FilterDB)
+
+@router.delete("/filters/{filter_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_filter(filter_id: int, session: AsyncSession = Depends(get_async_session)):
     """
     Удаляет существующий фильтр.

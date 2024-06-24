@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from app.api.validators import check_patent_exists
+from app.core.config import settings
 from app.core.db import get_async_session
 from app.crud.patent import patent_crud
 from app.crud.patents_export import get_export_patent_file
@@ -35,7 +36,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK
 )
 @cached(
-    ttl=3600,
+    ttl=settings.cache_ttl,
     cache=Cache.MEMORY,
     key_builder=lambda *args, **kwargs: (
             f"patents:{kwargs.get('page')}:{kwargs.get('pagesize')}:"
@@ -82,7 +83,7 @@ async def list_patents(
     status_code=status.HTTP_200_OK
 )
 @cached(
-    ttl=3600,
+    ttl=settings.cache_ttl,
     cache=Cache.MEMORY,
     key_builder=lambda *args, **kwargs: f"patents_stats:{kwargs.get('filter_id')}"
 )
