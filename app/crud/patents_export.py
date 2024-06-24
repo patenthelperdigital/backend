@@ -7,7 +7,7 @@ import aiofiles
 from fastapi import HTTPException
 from openpyxl.workbook import Workbook
 
-from sqlalchemy import select, func, case, literal_column, and_
+from sqlalchemy import select, func, case, literal_column, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi.responses import StreamingResponse
@@ -59,7 +59,7 @@ async def get_export_patent_file(
                 (Patent.kind == 3, literal_column("'промышленный образец'")),
                 else_=literal_column("'неизвестно'")
             ).label('patent_kind'),
-            Patent.reg_date,
+            text("to_char(Patent.reg_date, 'DD.MM.YYYY')").label('reg_date_formatted'),
             Patent.name,
             Patent.actual,
             Patent.category,
@@ -127,7 +127,7 @@ async def get_export_patent_file(
                 row.full_name,
                 row.reg_number,
                 row.patent_kind,
-                row.reg_date.strftime('%d.%m.%Y'),
+                row.reg_date_formatted,
                 row.name,
                 row.actual,
                 row.category,
