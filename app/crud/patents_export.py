@@ -1,13 +1,13 @@
 from io import BytesIO
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from typing import Optional
 
 import aiofiles
-import pandas as pd
+
 from fastapi import HTTPException
 from openpyxl.workbook import Workbook
 
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func, case, literal_column, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi.responses import StreamingResponse
@@ -42,14 +42,22 @@ async def get_export_patent_file(
     Returns:
         StreamingResponse: Поток данных с XLSX-файлом, содержащим информацию о патентах.
         """
+    author_count_subquery = (
+        select(
+            Patent.reg_number.label('patent_reg_number'),
+            Patent.kind.label('patent_kind'),
+            func.coalesce(func.array_length(func.string_to_array(Patent.author_raw, ','), 1), 0).label('author_count')
+        ).subquery()
+    )
+
     stmt = (
         select(
             Patent.reg_number,
             case(
-                (Patent.kind == 1, 'изобретение'),
-                (Patent.kind == 2, 'полезная модель'),
-                (Patent.kind == 3, 'промышленный образец'),
-                else_='неизвестно'
+                (Patent.kind == 1, literal_column("'изобретение'")),
+                (Patent.kind == 2, literal_column("'полезная модель'")),
+                (Patent.kind == 3, literal_column("'промышленный образец'")),
+                else_=literal_column("'неизвестно'")
             ).label('patent_kind'),
             Patent.reg_date,
             Patent.name,
@@ -58,20 +66,25 @@ async def get_export_patent_file(
             Patent.subcategory,
             Patent.region,
             Patent.city,
-            func.coalesce(func.array_length(func.string_to_array(Patent.author_raw, ','), 1), 0).label('author_count'),
+            author_count_subquery.c.author_count,
             Person.tax_number,
             case(
-                (Person.kind == 1, 'Юрлицо'),
-                (Person.kind == 2, 'Физлицо/ИП'),
-                else_='неизвестно'
+                (Person.kind == 1, literal_column("'Юрлицо'")),
+                (Person.kind == 2, literal_column("'Физлицо/ИП'")),
+                else_=literal_column("'неизвестно'")
             ).label('person_kind'),
             Person.category.label("person_category"),
             Person.full_name,
         )
-        .join(Ownership, (Ownership.patent_kind == Patent.kind) & (Ownership.patent_reg_number == Patent.reg_number))
+        .select_from(Patent)
+        .join(Ownership, and_(Ownership.patent_kind == Patent.kind, Ownership.patent_reg_number == Patent.reg_number))
         .join(Person, Person.tax_number == Ownership.person_tax_number)
+        .join(author_count_subquery, and_(
+            author_count_subquery.c.patent_reg_number == Patent.reg_number,
+            author_count_subquery.c.patent_kind == Patent.kind
+        ))
+        .order_by(Patent.reg_number)
         .limit(10000)
-
     )
 
     if filter_id:
@@ -93,41 +106,45 @@ async def get_export_patent_file(
     if kind:
         stmt = stmt.where(Patent.kind == kind)
 
-    result = await session.execute(stmt)
-    patents = result.all()
-
-    data = [
-        {
-            "ИНН": patent.tax_number,
-            "Вид": patent.person_kind,
-            "Категория": patent.person_category,
-            "Полное наименование": patent.full_name,
-            "Регистрационный номер патента": patent.reg_number,
-            "Вид патента": patent.patent_kind,
-            "Дата регистрации": patent.reg_date,
-            "Название": patent.name,
-            "Актуальность патента": patent.actual,
-            "Индекс класса по МПК": patent.category,
-            "Индекс подкласса по МПК": patent.subcategory,
-            "Регион правообладателя": patent.region,
-            "Город правообладателя": patent.city,
-            "Число авторов": patent.author_count,
-        }
-        for patent in patents
+    headers = [
+        "ИНН", "Вид", "Категория", "Полное наименование", "Регистрационный номер патента",
+        "Вид патента", "Дата регистрации", "Название", "Актуальность патента",
+        "Индекс класса по МПК", "Индекс подкласса по МПК", "Регион правообладателя",
+        "Город правообладателя", "Число авторов"
     ]
 
-    df = pd.DataFrame(data)
+    with NamedTemporaryFile(delete=False) as temp_file:
+        wb = Workbook(write_only=True)
+        ws = wb.create_sheet(title="Patents")
+        ws.append(headers)
 
-    df["Дата регистрации"] = pd.to_datetime(df["Дата регистрации"]).dt.strftime('%d.%m.%Y')
+        result = await session.execute(stmt)
+        for row in result:
+            row_data = [
+                row.tax_number,
+                row.person_kind,
+                row.person_category,
+                row.full_name,
+                row.reg_number,
+                row.patent_kind,
+                row.reg_date.strftime('%d.%m.%Y'),
+                row.name,
+                row.actual,
+                row.category,
+                row.subcategory,
+                row.region,
+                row.city,
+                row.author_count
+            ]
+            ws.append(row_data)
 
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Patents')
+        wb.save(temp_file.name)
 
-    buffer.seek(0)
+        async with aiofiles.open(temp_file.name, mode="rb") as f:
+            content = await f.read()
 
     return StreamingResponse(
-        buffer,
+        BytesIO(content),
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={"Content-Disposition": "attachment; filename=patents_export.xlsx"}
     )

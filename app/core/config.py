@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     database_url: str
     database_cli_url: str
 
-
     class Config:
         env_file = '.env'
 
